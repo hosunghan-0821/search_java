@@ -27,6 +27,18 @@ public class ChromeDriverToolFactory {
         factoryHashMap.put(key, chromeDriverTool);
     }
 
+    public ChromeOptions getChromeOptions(){
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--no-sandbox");
+        options.addArguments("window-size=1920x1080");
+        options.addArguments("start-maximized");
+        options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
+        options.setExperimentalOption("useAutomationExtension", false);
+        options.addArguments("--disable-automation");
+        options.addArguments("--disable-blink-features=AutomationControlled");
+        options.setExperimentalOption("detach", true);
+        return options;
+    }
     private ChromeOptions setOptions() {
 
         ChromeOptions options = new ChromeOptions();
@@ -40,5 +52,6 @@ public class ChromeDriverToolFactory {
         options.setExperimentalOption("detach", true);
         return options;
     }
+
 
 }
