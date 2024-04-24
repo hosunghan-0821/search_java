@@ -7,7 +7,7 @@ import lombok.ToString;
 @Builder
 @Getter
 @ToString
-public class CommonProduct {
+public class SearchProduct {
 
     //부띠끄
     private String sku;
@@ -16,17 +16,20 @@ public class CommonProduct {
     private String monitoringSite;
     private String colorCode;
     private String imgUrl;
-    private double price;
+    private double inputPrice; // 해외 떼오는 가격
     private String unit;
+    private boolean isFta;
 
     //kream 관련
+    private String kreamProductId;
     private String kreamImageUrl;
     private String tradingVolume;
     private String instantSalePrice;
     private String instantBuyPrice;
-    private String averagePrice; //최근거래 평균가
+    private double averagePrice; //최근거래 평균가
 
-    public void updateKreamInfo(String name, String tradingVolume, String instantSalePrice, String instantBuyPrice, String kreamImageUrl, String averagePrice) {
+    public void updateKreamInfo(String name, String tradingVolume, String instantSalePrice, String instantBuyPrice, String kreamImageUrl, double averagePrice, String kreamProductId) {
+        this.kreamProductId = kreamProductId;
         this.name= name;
         this.tradingVolume = tradingVolume;
         this.instantSalePrice = instantSalePrice;

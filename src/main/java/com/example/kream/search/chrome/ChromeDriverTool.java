@@ -19,7 +19,7 @@ public class ChromeDriverTool {
 
     private boolean isLoadData = false;
 
-    private boolean isRunning = true;
+    private boolean isRunning = false;
 
     public ChromeDriverTool(ChromeDriver chromeDriver, WebDriverWait webDriverWait) {
         this.chromeDriver = chromeDriver;

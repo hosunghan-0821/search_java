@@ -1,10 +1,13 @@
 package com.example.kream.search.kream;
 
+import com.example.kream.search.analyzer.CompareData;
+import com.example.kream.search.analyzer.CompareDataResult;
+import com.example.kream.search.analyzer.MoneyUnit;
+import com.example.kream.search.analyzer.PriceCompareCore;
 import com.example.kream.search.chrome.ChromeDriverTool;
 import com.example.kream.search.chrome.ChromeDriverToolFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -24,24 +27,41 @@ import static com.example.kream.search.kream.KreamString.KREAM;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class KreamMonitorCore {
+public class KreamSearchCore {
 
     private final ChromeDriverToolFactory chromeDriverToolFactory;
 
+    private final PriceCompareCore compareCore;
 
-    public CommonProduct runProductCompareLogic(CommonProduct findProduct){
 
+    public SearchProduct searchProductOrNull(SearchProduct findProduct) {
 
-        ChromeDriver driver = new ChromeDriver(chromeDriverToolFactory.getChromeOptions());
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofMillis(5000)); // 최대 5초 대기
+        ChromeDriverTool chromeDriverTool = chromeDriverToolFactory.getChromeDriverTool(KREAM);
 
-        login(driver,wait);
-        CommonProduct productOrNull = findProductOrNull(driver, wait, findProduct);
+        ChromeDriver driver;
+        WebDriverWait wait;
+        boolean makeNewDriver = false;
 
-        if (productOrNull != null) {
-            log.info(productOrNull.toString());
+        if (!chromeDriverTool.isRunning()) {
+            chromeDriverTool.isRunning(true);
+            driver = chromeDriverTool.getChromeDriver();
+            wait = chromeDriverTool.getWebDriverWait();
+        } else {
+            makeNewDriver = true;
+            driver = new ChromeDriver(chromeDriverToolFactory.getChromeOptions());
+            wait = new WebDriverWait(driver, Duration.ofMillis(5000)); // 최대 5초 대기
         }
-        driver.quit();
+
+
+        login(driver, wait);
+        SearchProduct productOrNull = findProductOrNull(driver, wait, findProduct);
+
+        if (makeNewDriver) {
+            driver.quit();
+        } else {
+            chromeDriverTool.isRunning(false);
+        }
+
         return productOrNull;
     }
 
@@ -69,9 +89,9 @@ public class KreamMonitorCore {
         }
     }
 
-    public CommonProduct findProductOrNull(ChromeDriver driver, WebDriverWait wait, CommonProduct commonProduct) {
+    public SearchProduct findProductOrNull(ChromeDriver driver, WebDriverWait wait, SearchProduct searchProduct) {
 
-        driver.get("https://www.kream.co.kr/search?keyword=" + commonProduct.getSku());
+        driver.get("https://www.kream.co.kr/search?keyword=" + searchProduct.getSku());
 
         String name;
         String tradingVolume;
@@ -111,6 +131,8 @@ public class KreamMonitorCore {
 
                 //즉시 판매가
                 instantSalePrice = elements.get(1).getText().split("\n")[0];
+
+
 
                 //거래량 가져오기
                 Actions actions = new Actions(driver);
@@ -153,26 +175,31 @@ public class KreamMonitorCore {
 
 
                 int averagePrice = getAveragePrice(tradingInfoDataList);
-                String averagePriceS = getFormattedNumberString(averagePrice);
-                commonProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePriceS);
+                searchProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePrice,kreamProductId);
 
             }
         } catch (Exception e) {
             //상풒 상세정보 모두 적어주기
-            log.error(commonProduct.getSku() + " : 품번 오류");
+            log.error(searchProduct.getSku() + " : 품번 오류");
             return null;
         }
 
-        return commonProduct;
+        return searchProduct;
     }
 
+    public CompareDataResult compareProduct(SearchProduct searchResultProduct) {
 
-    private String getFormattedNumberString(int averagePrice) {
-        NumberFormat format = NumberFormat.getInstance(Locale.US);
-        String averagePriceS = format.format(averagePrice);
-        averagePriceS += "원";
-        return averagePriceS;
+        CompareData compareData = CompareData.builder()
+                .searchAveragePrice(searchResultProduct.getAveragePrice())
+                .inputPrice(searchResultProduct.getInputPrice())
+                .moneyUnit(MoneyUnit.valueOf(searchResultProduct.getUnit()))
+                .isFtaProduct(searchResultProduct.isFta()) //TO-DO 나중에 바꿔야함
+                .build();
+
+        return compareCore.compare(compareData);
+
     }
+
 
     private int getAveragePrice(List<TradingInfo> tradingInfoDataList) {
 

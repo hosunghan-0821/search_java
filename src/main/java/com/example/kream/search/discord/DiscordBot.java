@@ -67,7 +67,7 @@ public class DiscordBot extends ListenerAdapter {
                 .upsertCommand(KREAM_ANALYZER,"kream price analyzer")
                 .addOption(OptionType.STRING,COMMAND_OPTIONS_PRODUCT_SKU,"크림에서 검색하려는 상품 품번",true)
                 .addOption(OptionType.NUMBER,COMMAND_OPTIONS_PRODUCT_PRICE, "상품 가격",true)
-                .addOption(OptionType.STRING, COMMAND_OPTIONS_PRODUCT_PRICE_UNIT,"ex) 유로 (default 유로)")
+                .addOption(OptionType.BOOLEAN,COMMAND_OPTIONS_IS_FTA_PRODUCT, "FTA 여부", true)
                 .queue();
 
 
