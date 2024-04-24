@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -64,12 +65,11 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         jda.getGuildById(1220650964852408351L)
-                .upsertCommand(KREAM_ANALYZER,"kream price analyzer")
-                .addOption(OptionType.STRING,COMMAND_OPTIONS_PRODUCT_SKU,"크림에서 검색하려는 상품 품번",true)
-                .addOption(OptionType.NUMBER,COMMAND_OPTIONS_PRODUCT_PRICE, "상품 가격",true)
-                .addOption(OptionType.BOOLEAN,COMMAND_OPTIONS_IS_FTA_PRODUCT, "FTA 여부", true)
+                .upsertCommand(KREAM_ANALYZER, "kream price analyzer")
+                .addOption(OptionType.STRING, COMMAND_OPTIONS_PRODUCT_SKU, "크림에서 검색하려는 상품 품번", true)
+                .addOption(OptionType.NUMBER, COMMAND_OPTIONS_PRODUCT_PRICE, "상품 가격", true)
+                .addOption(OptionType.BOOLEAN, COMMAND_OPTIONS_IS_FTA_PRODUCT, "FTA 여부", true)
                 .queue();
-
 
 
         List<TextChannel> textChannels = jda.getTextChannels();
@@ -90,23 +90,29 @@ public class DiscordBot extends ListenerAdapter {
         super.onMessageReceived(event);
 
         User user = event.getAuthor();
-//
-//        switch (event.getChannel().asTextChannel().getName()){
-//            case DiscordString.ALL_CATEGORIES_CHANNEL, DiscordString.BIFFI_DISCOUNT_CHANNEL:
-//                break;
-//            default:
-//                return;
-//        }
+
+        TextChannel textChannel = event.getChannel().asTextChannel();
+        String message = event.getMessage().getContentDisplay();
+        String returnMessage = null;
+        switch (textChannel.getName()) {
+            case DiscordString.KREAM_COMPARE_CHANNEL:
+                if (message.startsWith("!")) {
+                    returnMessage = botCommands.updateAnalyzerSettingOrNull(message);
+                }
+                break;
+            default:
+                return;
+        }
 
         //로봇이 보낸건 무시.
         if (user.isBot() && !event.getMessage().toString().startsWith("!")) {
             return;
         }
 
-        TextChannel textChannel = event.getChannel().asTextChannel();
+        if (returnMessage != null) {
+            textChannel.sendMessage(returnMessage).queue();
+        }
 
-        String channelName = textChannel.getName();
-        String returnMessage = "";
 
     }
 
@@ -121,10 +127,6 @@ public class DiscordBot extends ListenerAdapter {
             log.error("유효하지 않은 채널이름 : {}", channelName);
         }
     }
-
-
-
-
 
 
 }

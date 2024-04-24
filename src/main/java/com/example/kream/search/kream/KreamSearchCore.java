@@ -98,6 +98,7 @@ public class KreamSearchCore {
         String instantSalePrice;
         String instantBuyPrice;
         String imageUrl;
+        String modelNum;
 
         try {
             //상품 결과
@@ -132,7 +133,9 @@ public class KreamSearchCore {
                 //즉시 판매가
                 instantSalePrice = elements.get(1).getText().split("\n")[0];
 
-
+                //모델번호 가져오기
+                WebElement modelElement = driver.findElement(By.xpath("//div[@class='product_title' and contains(text(), '모델번호')]/.."));
+                modelNum = modelElement.findElement(By.xpath(".//div[@class='product_info']")).getText();
 
                 //거래량 가져오기
                 Actions actions = new Actions(driver);
@@ -175,7 +178,7 @@ public class KreamSearchCore {
 
 
                 int averagePrice = getAveragePrice(tradingInfoDataList);
-                searchProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePrice,kreamProductId);
+                searchProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePrice,modelNum);
 
             }
         } catch (Exception e) {

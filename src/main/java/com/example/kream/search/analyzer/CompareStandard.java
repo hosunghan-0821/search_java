@@ -11,18 +11,18 @@ public class CompareStandard {
 
     private double standardRate = 10.0;
 
-    private Double unitValue = 1400.0;
+    private double unitValue = 1400.0;
 
 
-    protected void setMoneyUnit(MoneyUnit moneyUnit) {
+    public void setMoneyUnit(MoneyUnit moneyUnit) {
         this.moneyUnit = moneyUnit;
     }
 
-    protected void setStandardRate(double standardRate) {
+    public void setStandardRate(double standardRate) {
         this.standardRate = standardRate;
     }
 
-    protected void setUnitValue(Double unitValue) {
+    public void setUnitValue(double unitValue) {
         this.unitValue = unitValue;
     }
 

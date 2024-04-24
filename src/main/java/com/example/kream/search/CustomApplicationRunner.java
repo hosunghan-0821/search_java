@@ -32,8 +32,6 @@ public class CustomApplicationRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         //기본 검색 크롬 만들어두기
         chromeDriverToolFactory.makeChromeDriverTool(KREAM);
-
-
         //의존성 주입
         discordBot.getBotCommands().setKreamSearchCore(kreamSearchCore);
     }

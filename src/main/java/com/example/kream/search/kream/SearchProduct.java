@@ -21,6 +21,7 @@ public class SearchProduct {
     private boolean isFta;
 
     //kream 관련
+    private String kreamModelNum;
     private String kreamProductId;
     private String kreamImageUrl;
     private String tradingVolume;
@@ -28,8 +29,9 @@ public class SearchProduct {
     private String instantBuyPrice;
     private double averagePrice; //최근거래 평균가
 
-    public void updateKreamInfo(String name, String tradingVolume, String instantSalePrice, String instantBuyPrice, String kreamImageUrl, double averagePrice, String kreamProductId) {
-        this.kreamProductId = kreamProductId;
+    public void updateKreamInfo(String name, String tradingVolume, String instantSalePrice, String instantBuyPrice, String kreamImageUrl, double averagePrice, String kreamModelNum) {
+
+        this.kreamModelNum = kreamModelNum;
         this.name= name;
         this.tradingVolume = tradingVolume;
         this.instantSalePrice = instantSalePrice;

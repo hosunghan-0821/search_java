@@ -1,6 +1,7 @@
 package com.example.kream.search.discord;
 
 import com.example.kream.search.analyzer.CompareDataResult;
+import com.example.kream.search.analyzer.CompareStandard;
 import com.example.kream.search.kream.SearchProduct;
 import com.example.kream.search.kream.KreamSearchCore;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,9 @@ public class BotCommands extends ListenerAdapter {
 
     public static final String KREAM_ANALYZER = "kream-analyzer";
 
-    public KreamSearchCore kreamSearchCore;
+    private final CompareStandard compareStandard;
+
+    private KreamSearchCore kreamSearchCore;
 
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
@@ -68,7 +71,7 @@ public class BotCommands extends ListenerAdapter {
             SearchProduct resultProduct = kreamSearchCore.searchProductOrNull(searchProduct);
             //상품 검색결과 없을 때
             if (resultProduct == null) {
-                event.getChannel().asTextChannel().sendMessage("품번을 확인해주세요").queue();
+                event.getChannel().asTextChannel().sendMessage(searchProduct.getSku() + " 품번을 확인해주세요").queue();
                 return;
             }
 
@@ -91,21 +94,21 @@ public class BotCommands extends ListenerAdapter {
         embed.setTitle("비교 결과 리포트");
         embed.setDescription(
                 "### 예상 수익률 : " + compareDataResult.getDifferenceRate() + "%" + "\n\n" +
-                "상품품번 : " + searchProduct.getSku()  + " " + searchProduct.getColorCode()+ "\n" +
+                        "상품품번 : " + searchProduct.getSku() + " " + searchProduct.getColorCode() + "\n" +
 
-                "크림 품번 : " + searchProduct.getKreamProductId() + "\n" +
-                "크림 상품명 : " + searchProduct.getName() + "\n" +
-                "상품원산지 : " + searchProduct.getMadeBy() + "\n\n" +
+                        "크림 모델번호 : " + searchProduct.getKreamModelNum() + "\n" +
+                        "크림 상품명 : " + searchProduct.getName() + "\n" +
+                        "상품원산지 : " + searchProduct.getMadeBy() + "\n\n" +
 
-                "크림 총 거래량 : " + searchProduct.getTradingVolume() + "\n" +
-                "크림 즉시 구매가 : " + searchProduct.getInstantBuyPrice() + "\n" +
-                "크림 즉시 판매가 : " + searchProduct.getInstantSalePrice() + "\n" +
-                "크림 최근 평균 판매가 : " + getFormattedNumberString(searchProduct.getAveragePrice()) + "\n" +
-                "상품 매입가 : " + getFormattedNumberString(compareDataResult.getFinalPrice()) + "\n\n" +
+                        "크림 총 거래량 : " + searchProduct.getTradingVolume() + "\n" +
+                        "크림 즉시 구매가 : " + searchProduct.getInstantBuyPrice() + "\n" +
+                        "크림 즉시 판매가 : " + searchProduct.getInstantSalePrice() + "\n" +
+                        "크림 최근 평균 판매가 : " + getFormattedNumberString(searchProduct.getAveragePrice()) + "\n" +
+                        "상품 매입가 : " + getFormattedNumberString(compareDataResult.getFinalPrice()) + "\n\n" +
 
-                "매입 합격 여부 : " + compareDataResult.isPassStandard() + "\n" +
-                "FTA 적용여부 : " + compareDataResult.isFtaProduct() + "\n " +
-                "설정한 환율 : " + compareDataResult.getUnitValue() + "\n"
+                        "매입 합격 여부 : " + compareDataResult.isPassStandard() + "\n" +
+                        "FTA 적용여부 : " + compareDataResult.isFtaProduct() + "\n " +
+                        "설정한 환율 : " + compareDataResult.getUnitValue() + "\n"
         );
 
         if (compareDataResult.isPassStandard()) {
@@ -123,10 +126,37 @@ public class BotCommands extends ListenerAdapter {
         this.kreamSearchCore = kreamSearchCore;
     }
 
+    public String updateAnalyzerSettingOrNull(String message) {
+        message = message.substring(1);
+        String returnMessage = null;
+        if (message.contains("환율")) {
+            String[] split = message.split(" ");
+            if (split.length == 2) {
+                String changeUnitValue = split[1];
+                compareStandard.setUnitValue(Double.parseDouble(changeUnitValue));
+                returnMessage = "환율이 변경되었습니다.";
+            }
+        } else if (message.contains("수익률")) {
+            String[] split = message.split(" ");
+            if (split.length == 2) {
+                String changeRate = split[1];
+                compareStandard.setStandardRate(Double.parseDouble(changeRate));
+                returnMessage = "목표 수익률 변경되었습니다.";
+            }
+        } else if (message.contains("status")) {
+            returnMessage = "환율 : " + compareStandard.getUnitValue() + " 목표 수익률 " + compareStandard.getStandardRate();
+        }
+
+        return returnMessage;
+    }
+
+
     private String getFormattedNumberString(double averagePrice) {
         NumberFormat format = NumberFormat.getInstance(Locale.US);
         String averagePriceS = format.format(averagePrice);
         averagePriceS += "원";
         return averagePriceS;
     }
+
+
 }
