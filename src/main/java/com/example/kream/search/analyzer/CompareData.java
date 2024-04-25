@@ -11,7 +11,7 @@ public class CompareData {
 
     private double inputPrice;
     private MoneyUnit moneyUnit;
-    private boolean isFtaProduct;
+    private Boolean isFtaProduct;
     private double searchAveragePrice;
     private double resultRate;
 }

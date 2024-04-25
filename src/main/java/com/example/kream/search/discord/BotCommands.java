@@ -39,6 +39,8 @@ public class BotCommands extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
 
+        final TextChannel textChannel = event.getJDA().getChannelById(TextChannel.class, 1232205575287345214L);
+        assert (textChannel != null);
 
         if (event.getName().equals(KREAM_ANALYZER)) {
             OptionMapping skuOption = event.getOption(COMMAND_OPTIONS_PRODUCT_SKU);
@@ -62,39 +64,50 @@ public class BotCommands extends ListenerAdapter {
 
             SearchProduct searchProduct = SearchProduct.builder()
                     .sku(sku)
+                    .originSku(sku)
                     .inputPrice(asDouble)
                     .unit(unit)
-                    .isFta(isFta)
+                    .fta(isFta)
                     .build();
 
-            event.reply("크림 분석시작합니다. 곧 결과를 알려드릴게요").queue();
+
+            event.reply("크림 분석시작합니다. 곧 결과를 알려드릴게요").setEphemeral(true).queue();
             SearchProduct resultProduct = kreamSearchCore.searchProductOrNull(searchProduct);
             //상품 검색결과 없을 때
-            if (resultProduct == null) {
-                event.getChannel().asTextChannel().sendMessage(searchProduct.getSku() + " 품번을 확인해주세요").queue();
+            if (!isKreamProductExist(resultProduct, textChannel)) {
                 return;
             }
 
             CompareDataResult compareDataResult = kreamSearchCore.compareProduct(resultProduct);
             //크림 가격 분석 및 이미지
-            sendSearchAndCompareReport(event, resultProduct, compareDataResult);
+            sendSearchAndCompareReport(textChannel, resultProduct, compareDataResult);
+
 
         }
 
     }
 
-    public void sendSearchAndCompareReport(SlashCommandInteractionEvent event, SearchProduct searchProduct, CompareDataResult compareDataResult) {
+    private boolean isKreamProductExist(SearchProduct resultProduct, TextChannel textChannel) {
 
+        if (resultProduct == null) {
+            textChannel.sendMessage(resultProduct.getSku() + " 품번을 확인해주세요").queue();
+            return false;
+        } else if (resultProduct.getTradingVolume() == null) {
+            textChannel.sendMessage(resultProduct.getSku() + " 크림 거래량이 없습니다 확인해주세요").queue();
+            return false;
+        }
+        return true;
+    }
 
-        final TextChannel textChannel = event.getChannel().asTextChannel();
-        assert (textChannel != null);
+    public void sendSearchAndCompareReport(TextChannel textChannel, SearchProduct searchProduct, CompareDataResult compareDataResult) {
+
 
         // Embed 생성
         EmbedBuilder embed = new EmbedBuilder();
         embed.setTitle("비교 결과 리포트");
         embed.setDescription(
                 "### 예상 수익률 : " + compareDataResult.getDifferenceRate() + "%" + "\n\n" +
-                        "상품품번 : " + searchProduct.getSku() + " " + searchProduct.getColorCode() + "\n" +
+                        "상품품번 : " + searchProduct.getOriginSku() + " " + searchProduct.getOriginColorCode() + "\n" +
 
                         "크림 모델번호 : " + searchProduct.getKreamModelNum() + "\n" +
                         "크림 상품명 : " + searchProduct.getName() + "\n" +

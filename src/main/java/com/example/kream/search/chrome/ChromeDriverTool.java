@@ -8,6 +8,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Getter
 public class ChromeDriverTool {
@@ -16,6 +17,7 @@ public class ChromeDriverTool {
 
     private final WebDriverWait webDriverWait;
 
+    private final ReentrantLock reentrantLock = new ReentrantLock(true);
 
     private boolean isLoadData = false;
 

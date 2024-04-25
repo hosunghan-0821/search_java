@@ -11,6 +11,7 @@ public class PriceCompareCore {
 
     public CompareDataResult compare(CompareData compareData) {
 
+
         double searchAveragePrice = compareData.getSearchAveragePrice();
         double finalPrice = getFinalPrice(compareData);
         double differenceRate = ((searchAveragePrice * 0.945) - finalPrice) / finalPrice * 100;
@@ -24,8 +25,7 @@ public class PriceCompareCore {
                 .builder()
                 .differenceRate(differenceRate)
                 .finalPrice(finalPrice)
-                .isFtaProduct(compareData.isFtaProduct())
-                .moneyUnit(compareStandard.getMoneyUnit())
+                .isFtaProduct(compareData.getIsFtaProduct())
                 .unitValue(compareStandard.getUnitValue())
                 .isPassStandard(isPassStandard)
                 .build();
@@ -39,7 +39,7 @@ public class PriceCompareCore {
         double changeToWon = compareData.getInputPrice() * compareStandard.getUnitValue();
 
         double finalPrice;
-        if (compareData.isFtaProduct()) {
+        if (compareData.getIsFtaProduct()) {
             finalPrice = changeToWon * 1.1;
         } else {
             finalPrice = changeToWon * 1.24;

@@ -42,6 +42,7 @@ public class DiscordBot extends ListenerAdapter {
     private Map<String, String> channelHashMap = new HashMap<>();
 
     private ChromeDriverToolFactory chromeDriverToolFactory;
+    @Getter
     private JDA jda;
 
 

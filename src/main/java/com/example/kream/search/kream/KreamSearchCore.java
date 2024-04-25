@@ -6,21 +6,24 @@ import com.example.kream.search.analyzer.MoneyUnit;
 import com.example.kream.search.analyzer.PriceCompareCore;
 import com.example.kream.search.chrome.ChromeDriverTool;
 import com.example.kream.search.chrome.ChromeDriverToolFactory;
+import com.example.kream.search.discord.DiscordBot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.text.NumberFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.example.kream.search.kream.KreamString.KREAM;
 
@@ -33,6 +36,63 @@ public class KreamSearchCore {
 
     private final PriceCompareCore compareCore;
 
+    private final DiscordBot discordBot;
+
+    @Async
+    public void searchProductOrNull(List<SearchProduct> searchProductList, String monitoringSite) {
+
+        ChromeDriverTool chromeDriverTool = chromeDriverToolFactory.getChromeDriverTool(monitoringSite);
+        ChromeDriver driver = chromeDriverTool.getChromeDriver();
+        WebDriverWait wait = chromeDriverTool.getWebDriverWait();
+        ReentrantLock reentrantLock = chromeDriverTool.getReentrantLock();
+
+        if (reentrantLock.isLocked()) {
+            log.info(monitoringSite + " chrome driver 다른 제품들 검사중..");
+        }
+
+        try {
+            boolean getLock = reentrantLock.tryLock(60, TimeUnit.SECONDS);
+            if (!getLock) {
+                log.error(monitoringSite + "락 획득 실패");
+                return;
+            }
+            //로그인
+            login(driver, wait);
+
+            for (SearchProduct searchProduct : searchProductList) {
+                SearchProduct productOrNull = null;
+                try {
+                    productOrNull = findProductOrNull(driver, wait, searchProduct);
+                } catch (Exception e) {
+                    log.error("상품 검색 에러");
+                    login(driver, wait);
+                }
+
+                if (productOrNull == null) {
+                    log.error(searchProduct.getSku() + " 해당하는 품번 없음");
+                    continue;
+                } else if (productOrNull.getTradingVolume() == null) {
+                    log.error(searchProduct.getSku() + " 거래량 없음");
+                    continue;
+                }
+                CompareDataResult compareDataResult = compareProduct(productOrNull);
+                //기준이 넘는 경우에만 디스코드 알람
+                if (compareDataResult.isPassStandard()) {
+                    log.info("수익 기준 넘는 제품 등장" + searchProduct);
+                    TextChannel textChannel = discordBot.getJda().getChannelById(TextChannel.class, 1232205575287345214L);
+                    discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
+                } else {
+                    log.info("수익률 안넘음  상품정보 : " + searchProduct + "예상 수익률" + compareDataResult.getDifferenceRate());
+                }
+
+                Thread.sleep(500);
+            }
+        } catch (InterruptedException e) {
+            log.error(monitoringSite + " Lock 획득 실패");
+        } finally {
+            reentrantLock.unlock();
+        }
+    }
 
     public SearchProduct searchProductOrNull(SearchProduct findProduct) {
 
@@ -110,8 +170,6 @@ public class KreamSearchCore {
                 WebElement nameData = driver.findElement(By.xpath("//p[@class='name']"));
                 name = nameData.getText();
 
-                WebElement tradeData = driver.findElement(By.xpath("//div[@class='status_value']"));
-                tradingVolume = tradeData.getText();
 
                 WebElement productElement = productElements.get(0);
 
@@ -119,6 +177,13 @@ public class KreamSearchCore {
                 imageUrl = imageElement.getAttribute("src");
 
                 String kreamProductId = productElement.getAttribute("data-product-id");
+
+                try {
+                    WebElement tradeData = driver.findElement(By.xpath("//div[@class='status_value']"));
+                    tradingVolume = tradeData.getText();
+                } catch (Exception e) {
+                    return searchProduct;
+                }
 
                 //상세페이지 이동
                 driver.get("https://www.kream.co.kr/products/" + kreamProductId);
@@ -178,7 +243,7 @@ public class KreamSearchCore {
 
 
                 int averagePrice = getAveragePrice(tradingInfoDataList);
-                searchProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePrice,modelNum);
+                searchProduct.updateKreamInfo(name, tradingVolume, instantSalePrice, instantBuyPrice, imageUrl, averagePrice, modelNum);
 
             }
         } catch (Exception e) {
@@ -195,8 +260,7 @@ public class KreamSearchCore {
         CompareData compareData = CompareData.builder()
                 .searchAveragePrice(searchResultProduct.getAveragePrice())
                 .inputPrice(searchResultProduct.getInputPrice())
-                .moneyUnit(MoneyUnit.valueOf(searchResultProduct.getUnit()))
-                .isFtaProduct(searchResultProduct.isFta()) //TO-DO 나중에 바꿔야함
+                .isFtaProduct(searchResultProduct.getFta())
                 .build();
 
         return compareCore.compare(compareData);

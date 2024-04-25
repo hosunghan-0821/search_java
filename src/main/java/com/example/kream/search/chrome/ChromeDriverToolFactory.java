@@ -1,6 +1,7 @@
 package com.example.kream.search.chrome;
 
 
+import lombok.Getter;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -10,11 +11,13 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 public class ChromeDriverToolFactory {
 
     private final HashMap<String, ChromeDriverTool> factoryHashMap = new HashMap<String, ChromeDriverTool>();
+
 
     public ChromeDriverTool getChromeDriverTool(String key) {
         return factoryHashMap.get(key);
