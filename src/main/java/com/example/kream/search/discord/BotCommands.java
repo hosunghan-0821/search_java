@@ -111,6 +111,7 @@ public class BotCommands extends ListenerAdapter {
 
                         "크림 모델번호 : " + searchProduct.getKreamModelNum() + "\n" +
                         "크림 상품명 : " + searchProduct.getName() + "\n" +
+                        "모니터링 사이트 : " + searchProduct.getMonitoringSite() + "\n\n" +
                         "상품원산지 : " + searchProduct.getMadeBy() + "\n\n" +
 
                         "크림 총 거래량 : " + searchProduct.getTradingVolume() + "\n" +
@@ -121,7 +122,8 @@ public class BotCommands extends ListenerAdapter {
 
                         "매입 합격 여부 : " + compareDataResult.isPassStandard() + "\n" +
                         "FTA 적용여부 : " + compareDataResult.isFtaProduct() + "\n " +
-                        "설정한 환율 : " + compareDataResult.getUnitValue() + "\n"
+                        "설정한 환율 : " + compareDataResult.getUnitValue() + "\n\n"
+
         );
 
         if (compareDataResult.isPassStandard()) {
@@ -130,9 +132,13 @@ public class BotCommands extends ListenerAdapter {
             embed.setColor(Color.RED);
         }
 
+        embed.addField("사이트 바로가기", "[상품링크](" + searchProduct.getProductLink() + ")", false); // false는 필드가 인라인으로 표시되지 않도록 설정합니다.
+
         // 이미지 추가
         embed.setImage(searchProduct.getKreamImageUrl()); // 웹 이미지 사용
         textChannel.sendMessageEmbeds(embed.build()).queue();
+        assert searchProduct.getProductLink() != null;
+        textChannel.sendMessage(searchProduct.getProductLink()).queue();
     }
 
     public void setKreamSearchCore(KreamSearchCore kreamSearchCore) {

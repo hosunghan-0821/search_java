@@ -2,7 +2,6 @@ package com.example.kream.search.kream;
 
 import com.example.kream.search.analyzer.CompareData;
 import com.example.kream.search.analyzer.CompareDataResult;
-import com.example.kream.search.analyzer.MoneyUnit;
 import com.example.kream.search.analyzer.PriceCompareCore;
 import com.example.kream.search.chrome.ChromeDriverTool;
 import com.example.kream.search.chrome.ChromeDriverToolFactory;

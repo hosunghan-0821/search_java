@@ -9,16 +9,17 @@ import java.io.Serializable;
 @Builder
 @Getter
 @ToString
-public class SearchProduct implements Serializable {
+public class SearchProduct  {
 
 
-    static final long serialVersionUID = 1L;
+
 
     //부띠끄
     private String sku;
     private String name;
     private String madeBy;
     private String monitoringSite;
+    private String productLink;
     private String imgUrl;
     private double inputPrice; // 해외 떼오는 가격
     private String unit;
