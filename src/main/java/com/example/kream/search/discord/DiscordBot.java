@@ -35,8 +35,6 @@ import static com.example.kream.search.discord.BotCommands.*;
 public class DiscordBot extends ListenerAdapter {
 
 
-    private final DiscordMessageProcessor discordMessageProcessor;
-
     @Getter
     private final BotCommands botCommands;
     private Map<String, String> channelHashMap = new HashMap<>();
@@ -95,19 +93,15 @@ public class DiscordBot extends ListenerAdapter {
         TextChannel textChannel = event.getChannel().asTextChannel();
         String message = event.getMessage().getContentDisplay();
         String returnMessage = null;
-        switch (textChannel.getName()) {
-            case DiscordString.KREAM_COMPARE_CHANNEL:
-                if (message.startsWith("!")) {
-                    returnMessage = botCommands.updateAnalyzerSettingOrNull(message);
-                }
-                break;
-            default:
-                return;
-        }
-
+        Long channelIdLong = textChannel.getIdLong();
         //로봇이 보낸건 무시.
         if (user.isBot() && !event.getMessage().toString().startsWith("!")) {
             return;
+        }
+        if (channelIdLong.equals(DiscordString.KREAM_COMPARE_CHANNEL)) {
+            if (message.startsWith("!")) {
+                returnMessage = botCommands.updateAnalyzerSettingOrNull(message);
+            }
         }
 
         if (returnMessage != null) {

@@ -7,6 +7,7 @@ import com.example.kream.search.analyzer.PriceCompareCore;
 import com.example.kream.search.chrome.ChromeDriverTool;
 import com.example.kream.search.chrome.ChromeDriverToolFactory;
 import com.example.kream.search.discord.DiscordBot;
+import com.example.kream.search.discord.DiscordString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -61,13 +62,15 @@ public class KreamSearchCore {
             }
             CompareDataResult compareDataResult = compareProduct(productOrNull);
             //기준이 넘는 경우에만 디스코드 알람
-            TextChannel textChannel = discordBot.getJda().getChannelById(TextChannel.class, 1232205575287345214L);
+            TextChannel compareChannel = discordBot.getJda().getChannelById(TextChannel.class, DiscordString.KREAM_COMPARE_CHANNEL);
+            TextChannel allCompareChannel = discordBot.getJda().getChannelById(TextChannel.class, DiscordString.KREAM_COMPARE_ALL_CHANNEL);
             if (compareDataResult.isPassStandard()) {
                 log.info("수익 기준 넘는 제품 등장" + searchProduct);
-                discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
+                discordBot.getBotCommands().sendSearchAndCompareReport(compareChannel, searchProduct, compareDataResult);
+                discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
             } else {
                 log.info("수익률 안넘음  상품정보 : " + searchProduct + "예상 수익률" + compareDataResult.getDifferenceRate());
-                discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
+                discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
             }
 
             Thread.sleep(500);
