@@ -38,6 +38,42 @@ public class KreamSearchCore {
 
     private final DiscordBot discordBot;
 
+    private void searchProductLogic(ChromeDriver driver, WebDriverWait wait, List<SearchProduct> searchProductList) throws InterruptedException {
+        //
+
+        //로그인
+        login(driver, wait);
+
+        for (SearchProduct searchProduct : searchProductList) {
+            log.info("상품검색 시작합니다." + searchProduct.getSku());
+            SearchProduct productOrNull = null;
+            try {
+                productOrNull = findProductOrNull(driver, wait, searchProduct);
+            } catch (Exception e) {
+                log.error("상품 검색 에러");
+            }
+
+            if (productOrNull == null) {
+                continue;
+            } else if (productOrNull.getTradingVolume() == null) {
+                log.error(searchProduct.getSku() + " 거래량 없음");
+                continue;
+            }
+            CompareDataResult compareDataResult = compareProduct(productOrNull);
+            //기준이 넘는 경우에만 디스코드 알람
+            TextChannel textChannel = discordBot.getJda().getChannelById(TextChannel.class, 1232205575287345214L);
+            if (compareDataResult.isPassStandard()) {
+                log.info("수익 기준 넘는 제품 등장" + searchProduct);
+                discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
+            } else {
+                log.info("수익률 안넘음  상품정보 : " + searchProduct + "예상 수익률" + compareDataResult.getDifferenceRate());
+                discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
+            }
+
+            Thread.sleep(500);
+        }
+    }
+
     @Async
     public void searchProductOrNull(List<SearchProduct> searchProductList, String monitoringSite) {
 
@@ -46,52 +82,37 @@ public class KreamSearchCore {
         WebDriverWait wait = chromeDriverTool.getWebDriverWait();
         ReentrantLock reentrantLock = chromeDriverTool.getReentrantLock();
 
-        if (reentrantLock.isLocked()) {
-            log.info(monitoringSite + " chrome driver 다른 제품들 검사중..");
+        //크롬창이 닫혀있더라도 작동
+        if (!chromeDriverTool.checkWindowIsClosed(driver)) {
+            if (reentrantLock.isLocked()) {
+                log.info(monitoringSite + " chrome driver 다른 제품들 검사중..");
+            }
+            try {
+                boolean getLock = reentrantLock.tryLock(60, TimeUnit.SECONDS);
+                if (!getLock) {
+                    log.error(monitoringSite + "락 획득 실패");
+                    return;
+                }
+                searchProductLogic(driver, wait, searchProductList);
+            } catch (InterruptedException e) {
+                log.error(monitoringSite + " Lock 획득 실패");
+            } finally {
+                reentrantLock.unlock();
+            }
+        } else {
+            driver = new ChromeDriver(chromeDriverToolFactory.getChromeOptions());
+            wait = new WebDriverWait(driver, Duration.ofMillis(5000)); // 최대 5초 대기
+
+            try {
+                searchProductLogic(driver, wait, searchProductList);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            driver.quit();
         }
 
-        try {
-            boolean getLock = reentrantLock.tryLock(60, TimeUnit.SECONDS);
-            if (!getLock) {
-                log.error(monitoringSite + "락 획득 실패");
-                return;
-            }
-            //로그인
-            login(driver, wait);
 
-            for (SearchProduct searchProduct : searchProductList) {
-                SearchProduct productOrNull = null;
-                try {
-                    productOrNull = findProductOrNull(driver, wait, searchProduct);
-                } catch (Exception e) {
-                    log.error("상품 검색 에러");
-                    login(driver, wait);
-                }
-
-                if (productOrNull == null) {
-                    log.error(searchProduct.getSku() + " 해당하는 품번 없음");
-                    continue;
-                } else if (productOrNull.getTradingVolume() == null) {
-                    log.error(searchProduct.getSku() + " 거래량 없음");
-                    continue;
-                }
-                CompareDataResult compareDataResult = compareProduct(productOrNull);
-                //기준이 넘는 경우에만 디스코드 알람
-                if (compareDataResult.isPassStandard()) {
-                    log.info("수익 기준 넘는 제품 등장" + searchProduct);
-                    TextChannel textChannel = discordBot.getJda().getChannelById(TextChannel.class, 1232205575287345214L);
-                    discordBot.getBotCommands().sendSearchAndCompareReport(textChannel, searchProduct, compareDataResult);
-                } else {
-                    log.info("수익률 안넘음  상품정보 : " + searchProduct + "예상 수익률" + compareDataResult.getDifferenceRate());
-                }
-
-                Thread.sleep(500);
-            }
-        } catch (InterruptedException e) {
-            log.error(monitoringSite + " Lock 획득 실패");
-        } finally {
-            reentrantLock.unlock();
-        }
     }
 
     public SearchProduct searchProductOrNull(SearchProduct findProduct) {
@@ -102,7 +123,7 @@ public class KreamSearchCore {
         WebDriverWait wait;
         boolean makeNewDriver = false;
 
-        if (!chromeDriverTool.isRunning()) {
+        if (!chromeDriverTool.checkWindowIsClosed(chromeDriverTool.getChromeDriver()) && !chromeDriverTool.isRunning()) {
             chromeDriverTool.isRunning(true);
             driver = chromeDriverTool.getChromeDriver();
             wait = chromeDriverTool.getWebDriverWait();
@@ -247,8 +268,8 @@ public class KreamSearchCore {
 
             }
         } catch (Exception e) {
+            log.error("상품 검색 에러 "+searchProduct.toString());
             //상풒 상세정보 모두 적어주기
-            log.error(searchProduct.getSku() + " : 품번 오류");
             return null;
         }
 

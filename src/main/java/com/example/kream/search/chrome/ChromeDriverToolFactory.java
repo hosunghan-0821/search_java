@@ -2,6 +2,7 @@ package com.example.kream.search.chrome;
 
 
 import lombok.Getter;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -29,6 +30,7 @@ public class ChromeDriverToolFactory {
 
         factoryHashMap.put(key, chromeDriverTool);
     }
+
 
     public ChromeOptions getChromeOptions(){
         ChromeOptions options = new ChromeOptions();

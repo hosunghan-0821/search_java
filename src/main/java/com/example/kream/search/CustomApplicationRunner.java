@@ -1,6 +1,7 @@
 package com.example.kream.search;
 
 
+import com.example.kream.search.chrome.ChromeDriverTool;
 import com.example.kream.search.chrome.ChromeDriverToolFactory;
 import com.example.kream.search.discord.DiscordBot;
 import com.example.kream.search.kream.KreamSearchCore;
@@ -13,6 +14,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Set;
 
 import static com.example.kream.search.kream.KreamString.DOBULE_F;
 import static com.example.kream.search.kream.KreamString.KREAM;
@@ -32,9 +34,12 @@ public class CustomApplicationRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         //기본 검색 크롬 만들어두기
+
         chromeDriverToolFactory.makeChromeDriverTool(KREAM);
+
         chromeDriverToolFactory.makeChromeDriverTool(DOBULE_F);
         //의존성 주입
         discordBot.getBotCommands().setKreamSearchCore(kreamSearchCore);
+
     }
 }

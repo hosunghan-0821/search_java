@@ -1,8 +1,8 @@
 package com.example.kream.search.chrome;
 
 
-
 import lombok.Getter;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -28,6 +28,16 @@ public class ChromeDriverTool {
         this.webDriverWait = webDriverWait;
     }
 
+    public boolean checkWindowIsClosed(WebDriver driver) {
+        try {
+            driver.getCurrentUrl();
+        } catch (Exception e) {
+            return true;
+        }
+        return false;
+    }
 
-    public void isRunning(boolean bool) {isRunning = bool;}
+    public void isRunning(boolean bool) {
+        isRunning = bool;
+    }
 }
