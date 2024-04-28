@@ -11,7 +11,7 @@ public class CompareStandard {
 
     private double standardRate = 10.0;
 
-    private double unitValue = 1400.0;
+    private double unitValue = 1450.0;
 
 
     public void setMoneyUnit(MoneyUnit moneyUnit) {
