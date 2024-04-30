@@ -65,6 +65,7 @@ public class BotCommands extends ListenerAdapter {
             SearchProduct searchProduct = SearchProduct.builder()
                     .sku(sku)
                     .originSku(sku)
+                    .originColorCode("null")
                     .inputPrice(asDouble)
                     .unit(unit)
                     .fta(isFta)
@@ -74,7 +75,7 @@ public class BotCommands extends ListenerAdapter {
             event.reply("크림 분석시작합니다. 곧 결과를 알려드릴게요").setEphemeral(true).queue();
             SearchProduct resultProduct = kreamSearchCore.searchProductOrNull(searchProduct);
             //상품 검색결과 없을 때
-            if (!isKreamProductExist(resultProduct, textChannel)) {
+            if (!isKreamProductExist(resultProduct, textChannel,sku)) {
                 return;
             }
 
@@ -87,13 +88,13 @@ public class BotCommands extends ListenerAdapter {
 
     }
 
-    private boolean isKreamProductExist(SearchProduct resultProduct, TextChannel textChannel) {
+    private boolean isKreamProductExist(SearchProduct resultProduct, TextChannel textChannel,String sku) {
 
         if (resultProduct == null) {
-            textChannel.sendMessage(resultProduct.getSku() + " 품번을 확인해주세요").queue();
+            textChannel.sendMessage(sku + " 품번을 확인해주세요").queue();
             return false;
         } else if (resultProduct.getTradingVolume() == null) {
-            textChannel.sendMessage(resultProduct.getSku() + " 크림 거래량이 없습니다 확인해주세요").queue();
+            textChannel.sendMessage(sku + " 크림 거래량이 없습니다 확인해주세요").queue();
             return false;
         }
         return true;
@@ -111,8 +112,10 @@ public class BotCommands extends ListenerAdapter {
 
                         "크림 모델번호 : " + searchProduct.getKreamModelNum() + "\n" +
                         "크림 상품명 : " + searchProduct.getName() + "\n" +
+                        "크림 검색어 : " + searchProduct.getSku() + "\n" +
                         "모니터링 사이트 : " + searchProduct.getMonitoringSite() + "\n\n" +
                         "상품원산지 : " + searchProduct.getMadeBy() + "\n\n" +
+
 
                         "크림 총 거래량 : " + searchProduct.getTradingVolume() + "\n" +
                         "크림 즉시 구매가 : " + searchProduct.getInstantBuyPrice() + "\n" +

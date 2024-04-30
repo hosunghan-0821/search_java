@@ -103,7 +103,7 @@ public class KreamSearchCore {
             }
         } else {
             driver = new ChromeDriver(chromeDriverToolFactory.getChromeOptions());
-            wait = new WebDriverWait(driver, Duration.ofMillis(5000)); // 최대 5초 대기
+            wait = new WebDriverWait(driver, Duration.ofMillis(1500)); // 최대 5초 대기
 
             try {
                 searchProductLogic(driver, wait, searchProductList);
@@ -166,7 +166,7 @@ public class KreamSearchCore {
 
         //로그인하고 잠시 정지
         try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
         } catch (Exception e) {
 
         }
