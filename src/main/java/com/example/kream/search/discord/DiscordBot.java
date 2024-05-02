@@ -63,11 +63,11 @@ public class DiscordBot extends ListenerAdapter {
             throw new RuntimeException(e);
         }
 
-        jda.getGuildById(1220650964852408351L)
+        jda.getGuildById(1203618700939501568L)
                 .upsertCommand(KREAM_ANALYZER, "kream price analyzer")
-                .addOption(OptionType.STRING, COMMAND_OPTIONS_PRODUCT_SKU, "크림에서 검색하려는 상품 품번", true)
-                .addOption(OptionType.NUMBER, COMMAND_OPTIONS_PRODUCT_PRICE, "상품 가격", true)
-                .addOption(OptionType.BOOLEAN, COMMAND_OPTIONS_IS_FTA_PRODUCT, "FTA 여부", true)
+                .addOption(OptionType.STRING, COMMAND_OPTIONS_PRODUCT_SKU, "크림에서 검색하려는 상품 품번 리스트", true)
+                .addOption(OptionType.STRING, COMMAND_OPTIONS_PRODUCT_PRICE, "상품 가격 리스트", true)
+                .addOption(OptionType.STRING, COMMAND_OPTIONS_IS_FTA_PRODUCT, "FTA 여부 리스트", true)
                 .queue();
 
 

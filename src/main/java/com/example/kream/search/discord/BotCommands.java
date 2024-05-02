@@ -17,6 +17,8 @@ import java.awt.*;
 import java.text.NumberFormat;
 import java.util.Locale;
 
+import static com.example.kream.search.discord.DiscordString.KREAM_COMPARE_CHANNEL;
+
 
 @RequiredArgsConstructor
 @Component
@@ -39,19 +41,19 @@ public class BotCommands extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
 
-        final TextChannel textChannel = event.getJDA().getChannelById(TextChannel.class, 1232205575287345214L);
+        final TextChannel textChannel = event.getJDA().getChannelById(TextChannel.class, KREAM_COMPARE_CHANNEL);
         assert (textChannel != null);
 
         if (event.getName().equals(KREAM_ANALYZER)) {
             OptionMapping skuOption = event.getOption(COMMAND_OPTIONS_PRODUCT_SKU);
 
             assert skuOption != null;
-            String sku = skuOption.getAsString();
+            String skuString = skuOption.getAsString();
 
             OptionMapping priceOption = event.getOption(COMMAND_OPTIONS_PRODUCT_PRICE);
 
             assert priceOption != null;
-            double asDouble = priceOption.getAsDouble();
+            String priceString = priceOption.getAsString();
 
             OptionMapping unitOption = event.getOption(COMMAND_OPTIONS_PRODUCT_PRICE_UNIT);
             String unit = "EURO";
@@ -60,35 +62,50 @@ public class BotCommands extends ListenerAdapter {
             }
 
             OptionMapping ftaOption = event.getOption(COMMAND_OPTIONS_IS_FTA_PRODUCT);
-            boolean isFta = ftaOption.getAsBoolean();
+            String isFtaString = ftaOption.getAsString();
 
-            SearchProduct searchProduct = SearchProduct.builder()
-                    .sku(sku)
-                    .originSku(sku)
-                    .originColorCode("null")
-                    .inputPrice(asDouble)
-                    .unit(unit)
-                    .fta(isFta)
-                    .build();
+            String[] skuArray = skuString.split("/");
+            String[] priceArray = priceString.split("/");
+            String[] isFtaArray = isFtaString.split("/");
 
-
-            event.reply("크림 분석시작합니다. 곧 결과를 알려드릴게요").setEphemeral(true).queue();
-            SearchProduct resultProduct = kreamSearchCore.searchProductOrNull(searchProduct);
-            //상품 검색결과 없을 때
-            if (!isKreamProductExist(resultProduct, textChannel,sku)) {
+            if (!(skuArray.length == priceArray.length && priceArray.length == isFtaArray.length)) {
+                event.reply("요청하신 상품 정보 옵션들의 개수가 일치하지 않습니다. 확인 부탁드립니다.").setEphemeral(true).queue();
                 return;
             }
+            event.reply("크림 분석시작합니다. 곧 결과를 알려드릴게요").setEphemeral(true).queue();
 
-            CompareDataResult compareDataResult = kreamSearchCore.compareProduct(resultProduct);
-            //크림 가격 분석 및 이미지
-            sendSearchAndCompareReport(textChannel, resultProduct, compareDataResult);
+            for (int i = 0; i < skuArray.length; i++) {
+
+                String sku = skuArray[i].strip();
+                double inputPrice = Double.parseDouble(priceArray[i].strip().replaceAll(",", ""));
+                boolean isFta = Boolean.parseBoolean(isFtaArray[i].strip());
+                SearchProduct searchProduct = SearchProduct.builder()
+                        .sku(sku)
+                        .originSku(sku)
+                        .originColorCode("null")
+                        .inputPrice(inputPrice)
+                        .unit(unit)
+                        .fta(isFta)
+                        .build();
+
+
+                SearchProduct resultProduct = kreamSearchCore.searchProductOrNull(searchProduct);
+                //상품 검색결과 없을 때
+                if (!isKreamProductExist(resultProduct, textChannel, sku)) {
+                    continue;
+                }
+
+                CompareDataResult compareDataResult = kreamSearchCore.compareProduct(resultProduct);
+                //크림 가격 분석 및 이미지
+                sendSearchAndCompareReport(textChannel, resultProduct, compareDataResult);
+            }
 
 
         }
 
     }
 
-    private boolean isKreamProductExist(SearchProduct resultProduct, TextChannel textChannel,String sku) {
+    private boolean isKreamProductExist(SearchProduct resultProduct, TextChannel textChannel, String sku) {
 
         if (resultProduct == null) {
             textChannel.sendMessage(sku + " 품번을 확인해주세요").queue();
@@ -140,8 +157,10 @@ public class BotCommands extends ListenerAdapter {
         // 이미지 추가
         embed.setImage(searchProduct.getKreamImageUrl()); // 웹 이미지 사용
         textChannel.sendMessageEmbeds(embed.build()).queue();
-        assert searchProduct.getProductLink() != null;
-        textChannel.sendMessage(searchProduct.getProductLink()).queue();
+        if (searchProduct.getProductLink() != null) {
+            textChannel.sendMessage(searchProduct.getProductLink()).queue();
+        }
+
     }
 
     public void setKreamSearchCore(KreamSearchCore kreamSearchCore) {
