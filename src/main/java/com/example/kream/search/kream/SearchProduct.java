@@ -27,6 +27,7 @@ public class SearchProduct  {
 
     private String originSku;
     private String originColorCode;
+    private String originPrice;
 
     //kream 관련
     private String kreamModelNum;

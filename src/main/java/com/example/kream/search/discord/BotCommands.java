@@ -130,7 +130,7 @@ public class BotCommands extends ListenerAdapter {
                         "크림 모델번호 : " + searchProduct.getKreamModelNum() + "\n" +
                         "크림 상품명 : " + searchProduct.getName() + "\n" +
                         "크림 검색어 : " + searchProduct.getSku() + "\n" +
-                        "모니터링 사이트 : " + searchProduct.getMonitoringSite() + "\n\n" +
+                        "모니터링 사이트 : " + searchProduct.getMonitoringSite() + "\n" +
                         "상품원산지 : " + searchProduct.getMadeBy() + "\n\n" +
 
 
@@ -138,7 +138,8 @@ public class BotCommands extends ListenerAdapter {
                         "크림 즉시 구매가 : " + searchProduct.getInstantBuyPrice() + "\n" +
                         "크림 즉시 판매가 : " + searchProduct.getInstantSalePrice() + "\n" +
                         "크림 최근 평균 판매가 : " + getFormattedNumberString(searchProduct.getAveragePrice()) + "\n" +
-                        "상품 매입가 : " + getFormattedNumberString(compareDataResult.getFinalPrice()) + "\n\n" +
+                        "상품 매입가 : " + getFormattedNumberString(compareDataResult.getFinalPrice()) + "\n" +
+                        "상품 해외 FinalPrice : " + searchProduct.getOriginPrice()+ "\n" +
 
                         "매입 합격 여부 : " + compareDataResult.isPassStandard() + "\n" +
                         "FTA 적용여부 : " + compareDataResult.isFtaProduct() + "\n " +
