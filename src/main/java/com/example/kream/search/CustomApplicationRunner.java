@@ -35,11 +35,11 @@ public class CustomApplicationRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         //기본 검색 크롬 만들어두기
-
-        chromeDriverToolFactory.makeChromeDriverTool(KREAM);
-
-        chromeDriverToolFactory.makeChromeDriverTool(BIFFI);
-        chromeDriverToolFactory.makeChromeDriverTool(DOBULE_F);
+//
+//        chromeDriverToolFactory.makeChromeDriverTool(KREAM);
+//
+//        chromeDriverToolFactory.makeChromeDriverTool(BIFFI);
+//        chromeDriverToolFactory.makeChromeDriverTool(DOBULE_F);
         //의존성 주입
         discordBot.getBotCommands().setKreamSearchCore(kreamSearchCore);
 
