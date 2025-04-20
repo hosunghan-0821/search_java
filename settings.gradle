@@ -1,1 +1,8 @@
 rootProject.name = 'search'
+
+include 'search-core'
+include 'modules:chrome'
+include 'modules:s3'
+include 'database-sync-core'
+include 'modules:database'
+include 'modules:discord'
