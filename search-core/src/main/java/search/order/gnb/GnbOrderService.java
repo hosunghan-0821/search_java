@@ -1,6 +1,6 @@
 package search.order.gnb;
 
-import search.dto.OrderRequestDto;
+import search.controller.autoorder.dto.AutoOrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -36,13 +36,17 @@ public class GnbOrderService {
      * 상품 페이지 이동
      * */
     @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
-    public void step1(ChromeDriver driver, WebDriverWait wait, OrderRequestDto orderRequestDto) {
+    public void step1(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
         log.info("GNB STEP1 상품 페이지 이동 START");
-        validateLogin(driver, wait, orderRequestDto);
+        validateLogin(driver, wait, autoOrderRequestDto);
 
         //상품페이지 이동 Step1
-        driver.get(orderRequestDto.getProductLink());
+        if (driver.getCurrentUrl().equals(autoOrderRequestDto.getProductLink())) {
+            driver.navigate().refresh();
+        }
+
+        driver.get(autoOrderRequestDto.getProductLink());
 
         List<WebElement> elements = driver.findElements(By.xpath("//div[@class='shopping-cart mb-3']"));
 
@@ -56,7 +60,8 @@ public class GnbOrderService {
      *
      * 상품 검색 쇼핑카트 등록
      * */
-    public void step2(ChromeDriver driver, WebDriverWait wait, OrderRequestDto orderRequestDto) {
+    @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
+    public void step2(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
         log.info("GNB STEP2 상품 검색 쇼핑카트 등록 START");
         List<WebElement> elements = driver.findElements(By.xpath("//div[@class='shopping-cart mb-3']"));
@@ -70,7 +75,7 @@ public class GnbOrderService {
             String sku = dataList.get(1).getText();
 
             // 원하는 값들 찾으면
-            if (orderRequestDto.getSku().equals(sku)) {
+            if (autoOrderRequestDto.getSku().equals(sku)) {
 
                 try {
                     WebElement imageElement = productElement.findElement(By.xpath(".//img[@class='zoom lozad']"));
@@ -118,14 +123,15 @@ public class GnbOrderService {
                 return;
             }
         }
-        log.error("GNB STEP2 상품 존재하지 않음  sku : {}", orderRequestDto.getSku());
+        log.error("GNB STEP2 상품 존재하지 않음  sku : {}", autoOrderRequestDto.getSku());
 
     }
 
     /*
      * 쇼핑 카드 등록한 곳에서 주문 확정
      * */
-    public void step3(ChromeDriver driver, WebDriverWait wait, OrderRequestDto orderRequestDto) {
+    @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
+    public void step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
         driver.get("http://93.46.41.5:1995/cart");
 
@@ -145,7 +151,7 @@ public class GnbOrderService {
             List<WebElement> dataList = infoElement.findElements(By.xpath(".//div[@class='col-5']"));
             String sku = dataList.get(1).getText();
 
-            if (orderRequestDto.getSku().equals(sku)) {
+            if (autoOrderRequestDto.getSku().equals(sku)) {
                 isOrderSaved = true;
                 break;
             }
@@ -156,13 +162,17 @@ public class GnbOrderService {
             confirmButton.click();
         }
 
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='swal2-popup swal2-modal swal2-icon-warning swal2-show']")));
+        WebElement finalConfirmButton = driver.findElement(By.xpath("//button[@class='swal2-confirm swal2-styled swal2-default-outline']"));
 
+        // 최종 확인 시정에 finalConfirmButton Click();
+        
     }
 
-    private void validateLogin(ChromeDriver driver, WebDriverWait wait, OrderRequestDto orderRequestDto) {
+    private void validateLogin(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
 
-        driver.get(orderRequestDto.getProductLink());
+        driver.get(autoOrderRequestDto.getProductLink());
         //로그인 체크
         if (driver.getCurrentUrl().equals("http://93.46.41.5:1995/login")) {
             login(driver, wait);

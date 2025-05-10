@@ -1,4 +1,4 @@
-package search.dto;
+package search.controller.search.dto;
 
 import search.kream.SearchProduct;
 import lombok.*;

@@ -1,4 +1,4 @@
-package search.dto;
+package search.controller.autoorder.dto;
 
 
 import lombok.AllArgsConstructor;
@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class OrderRequestDto {
+public class AutoOrderRequestDto {
+
+    private String boutique;
+    private String price;
     private String sku;
     private String id;
     private String productLink;

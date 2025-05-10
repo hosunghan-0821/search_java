@@ -1,23 +1,23 @@
 package search.pool;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.stereotype.Component;
 import search.chrome.ChromeDriverTool;
 import search.chrome.ChromeDriverToolFactory;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-public class SeleniumDriverPool {
-    /*
-     *
-     */
+public class SeleniumDriverPool implements InitializingBean {
     private HashMap<String, BlockingQueue<ChromeDriverTool>> brandSeleniumDriverMap;
     private final ChromeDriverToolFactory chromeDriverToolFactory;
+
 
     public SeleniumDriverPool(ChromeDriverToolFactory chromeDriverToolFactory) {
         this.brandSeleniumDriverMap = new HashMap<>();
@@ -25,13 +25,13 @@ public class SeleniumDriverPool {
     }
 
 
-    public void initBrandSeleniumDriver(String brandName, int size) {
+    public void initBrandSeleniumDriver(String boutique, int size) {
         BlockingQueue<ChromeDriverTool> blockingQueue = new LinkedBlockingQueue<>();
         for (int i = 0; i < size; i++) {
-            ChromeDriverTool chromeDriverTool = chromeDriverToolFactory.makeChromeDriverTool(brandName + "_" + i);
+            ChromeDriverTool chromeDriverTool = chromeDriverToolFactory.makeChromeDriverTool(boutique + "_" + UUID.randomUUID().toString());
             blockingQueue.add(chromeDriverTool);
         }
-        brandSeleniumDriverMap.put(brandName, blockingQueue);
+        brandSeleniumDriverMap.put(boutique, blockingQueue);
     }
 
     public void refreshSeleniumDriver(String brandName) {
@@ -53,7 +53,21 @@ public class SeleniumDriverPool {
         }
     }
 
-    public BlockingQueue<ChromeDriverTool> getBrandBlockingQueue(String brandName) {
-        return this.brandSeleniumDriverMap.get(brandName);
+    public BlockingQueue<ChromeDriverTool> getBrandBlockingQueue(String boutique) {
+        return this.brandSeleniumDriverMap.get(boutique);
+    }
+
+    public boolean addSeleniumDriverTool(String boutique, ChromeDriverTool chromeDriverTool) {
+        BlockingQueue<ChromeDriverTool> brandBlockingQueue = this.getBrandBlockingQueue(boutique);
+        return brandBlockingQueue.add(chromeDriverTool);
+    }
+
+    public ChromeDriverTool makeSeleniumDriverTool(String boutique) {
+        return chromeDriverToolFactory.makeChromeDriverTool(boutique + UUID.randomUUID());
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        this.initBrandSeleniumDriver("GNB", 5);
     }
 }
