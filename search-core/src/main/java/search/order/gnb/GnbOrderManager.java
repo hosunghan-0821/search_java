@@ -19,6 +19,7 @@ import search.util.SeleniumUtil;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 @RequiredArgsConstructor
 @Component
@@ -28,6 +29,7 @@ public class GnbOrderManager {
     private final GnbOrderService gnbOrderService;
     private final SeleniumDriverPool seleniumDriverPool;
     private final ProductRepository productRepository;
+    private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
 
     /*
      *
@@ -40,15 +42,30 @@ public class GnbOrderManager {
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
         try {
-
             chromeDriverTool = validateChromeDriverTool(gnbBlockingQueue);
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
             WebDriverWait wait = chromeDriverTool.getWebDriverWait();
             gnbOrderService.step1(driver, wait, autoOrderRequestDto);
             gnbOrderService.step2(driver, wait, autoOrderRequestDto);
-            gnbOrderService.step3(driver, wait, autoOrderRequestDto);
+            //여기까진 병렬적으로 진행되나,
+            // 최종 주문버튼 누르는 것은 직렬적으로 진행.
+            try {
+                boolean acquired = finalOrderStepLock.tryLock(3, TimeUnit.MINUTES);
+                if (acquired) {
+                    gnbOrderService.step3(driver, wait, autoOrderRequestDto);
+                } else {
+                    log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), autoOrderRequestDto.getProductLink());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // 인터럽트 상태 복원
+            } catch (Exception e) {
+                log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR MSG : " + e.getMessage());
+            } finally {
+                if (finalOrderStepLock.isHeldByCurrentThread()) {
+                    finalOrderStepLock.unlock();
+                }
+            }
         } catch (Exception e) {
-            e.printStackTrace();
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR MSG : " + e.getMessage());
         } finally {
             if (chromeDriverTool != null) {

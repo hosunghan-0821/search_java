@@ -97,6 +97,11 @@ public class GnbOrderService {
 
                     String placeholder = inputElement.getAttribute("placeholder");
                     log.info("수량 : {}", placeholder);
+                    if (placeholder.equals("0")) {
+                        log.error("수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
+                        throw new RuntimeException();
+
+                    }
 
                     inputElement.sendKeys(placeholder);
                 }
@@ -166,7 +171,7 @@ public class GnbOrderService {
         WebElement finalConfirmButton = driver.findElement(By.xpath("//button[@class='swal2-confirm swal2-styled swal2-default-outline']"));
 
         // 최종 확인 시정에 finalConfirmButton Click();
-        
+
     }
 
     private void validateLogin(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
