@@ -4,9 +4,9 @@ import module.database.dto.Boutique;
 import module.database.entity.Product;
 import module.database.entity.ProductSize;
 import module.database.repository.ProductRepository;
-import org.openqa.selenium.remote.RemoteWebDriver;
+import module.discord.DiscordBot;
+import module.discord.DiscordString;
 import search.chrome.ChromeDriverTool;
-import search.chrome.ChromeDriverToolFactory;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.pool.SeleniumDriverPool;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +17,14 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import search.util.SeleniumUtil;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Component
@@ -33,6 +35,7 @@ public class GnbOrderManager {
     private final SeleniumDriverPool seleniumDriverPool;
     private final ProductRepository productRepository;
     private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
+    private final DiscordBot discordBot;
 
     /*
      *
@@ -48,6 +51,14 @@ public class GnbOrderManager {
             chromeDriverTool = validateChromeDriverTool(gnbBlockingQueue);
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
             WebDriverWait wait = chromeDriverTool.getWebDriverWait();
+            discordBot.sendAutoOrderMessage(
+                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
+                    "상품 주문 시작",
+                    makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 시작", ""),
+                    autoOrderRequestDto.getProductLink(),
+                    new String[0],
+                    Color.GRAY
+            );
             gnbOrderService.step1(driver, wait, autoOrderRequestDto);
             gnbOrderService.step2(driver, wait, autoOrderRequestDto);
             //여기까진 병렬적으로 진행되나,
@@ -70,6 +81,15 @@ public class GnbOrderManager {
             }
         } catch (Exception e) {
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR msg : " + e.getMessage());
+            discordBot.sendAutoOrderMessage(
+                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
+                    "상품 주문 실패",
+                    makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 실패", e.getMessage()),
+                    autoOrderRequestDto.getProductLink(),
+                    Stream.of(autoOrderRequestDto.getSku()).toArray(String[]::new),
+                    Color.RED
+            );
+            return;
         } finally {
             if (chromeDriverTool != null) {
                 if (!gnbBlockingQueue.offer(chromeDriverTool)) {
@@ -79,7 +99,14 @@ public class GnbOrderManager {
         }
 
         //Discord Notice 어떤 상품 자동주문 진행시켰는지 Noti
-
+        discordBot.sendAutoOrderMessage(
+                DiscordString.GNB_AUTO_ORDER_CHANNEL,
+                "상품 주문 성공",
+                makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 성공", ""),
+                autoOrderRequestDto.getProductLink(),
+                Stream.of(autoOrderRequestDto.getSku()).toArray(String[]::new),
+                Color.GREEN
+        );
     }
 
     private ChromeDriverTool validateChromeDriverTool(BlockingQueue<ChromeDriverTool> gnbBlockingQueue) throws InterruptedException {
@@ -150,5 +177,17 @@ public class GnbOrderManager {
     private Optional<Product> findProduct(AutoOrderRequestDto autoOrderRequestDto) {
         String noWhiteSpaceSku = autoOrderRequestDto.getSku().replaceAll(" ", "").trim();
         return productRepository.findAutoOrderProduct(noWhiteSpaceSku, autoOrderRequestDto.getBoutique());
+    }
+
+    private String makeDiscordSendMessage(AutoOrderRequestDto autoOrderRequestDto, String headerMessage, String errorMessage) {
+        return String.format(
+                "%s%n" +
+                        "sku                : %s%n" +
+                        "오류 메시지        : %s",
+                headerMessage,
+                autoOrderRequestDto.getSku(),
+                errorMessage
+        );
+
     }
 }
