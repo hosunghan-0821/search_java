@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
 @EnableTransactionManagement
-@ComponentScan(basePackages = {"com.dopee", "module.database"})
 @EntityScan(basePackages = {"module.database.entity"})
 @EnableJpaRepositories(
         basePackages = {"module.database"}

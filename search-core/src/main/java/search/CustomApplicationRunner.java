@@ -1,19 +1,18 @@
 package search;
 
 
-import search.chrome.ChromeDriverTool;
-import search.discord.DiscordBot;
-import search.kream.KreamSearchCore;
-import search.order.gnb.GnbOrderService;
-import search.pool.SeleniumDriverPool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import module.discord.DiscordBot;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import search.chrome.ChromeDriverTool;
+import search.kream.KreamSearchCore;
+import search.order.gnb.GnbOrderService;
+import search.pool.SeleniumDriverPool;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -45,7 +44,7 @@ public class CustomApplicationRunner implements ApplicationRunner {
 //        chromeDriverToolFactory.makeChromeDriverTool(DOBULE_F);
 
         //의존성 주입
-        discordBot.getBotCommands().setKreamSearchCore(kreamSearchCore);
+//        discordBot.getBotCommands().setKreamSearchCore(kreamSearchCore);
 
 
         BlockingQueue<ChromeDriverTool> gnbInitQueue = seleniumDriverPool.getBrandBlockingQueue("GNB");

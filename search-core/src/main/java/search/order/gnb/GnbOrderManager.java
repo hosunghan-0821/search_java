@@ -2,6 +2,7 @@ package search.order.gnb;
 
 import module.database.dto.Boutique;
 import module.database.entity.Product;
+import module.database.entity.ProductSize;
 import module.database.repository.ProductRepository;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import search.chrome.ChromeDriverTool;
@@ -16,6 +17,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import search.util.SeleniumUtil;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -66,7 +69,7 @@ public class GnbOrderManager {
                 }
             }
         } catch (Exception e) {
-            log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR MSG : " + e.getMessage());
+            log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR msg : " + e.getMessage());
         } finally {
             if (chromeDriverTool != null) {
                 if (!gnbBlockingQueue.offer(chromeDriverTool)) {
@@ -99,13 +102,37 @@ public class GnbOrderManager {
 
     public boolean validateProduct(AutoOrderRequestDto autoOrderRequestDto) {
         //DB에서 유효한 상품과 Size인지 확인
-        String noWhiteSpaceSku = autoOrderRequestDto.getSku().replaceAll(" ", "").trim();
-        Optional<Product> autoOrderProduct = productRepository.findAutoOrderProduct(noWhiteSpaceSku, autoOrderRequestDto.getBoutique());
+        Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
         if (autoOrderProduct.isPresent()) {
-            //TODO 가격비교 로직필요.
-            return true;
+            Product product = autoOrderProduct.get();
+            if (product.getPrice() == 0 || autoOrderRequestDto.getPrice() <= product.getPrice()) {
+                return true;
+            } else {
+                log.info("[Auto Order] - 기준 가격보다 상품의 현재 가격이 높아서 주문하지 않습니다. sku : {}", autoOrderRequestDto.getSku());
+                return false;
+            }
         } else {
+            log.info("[Auto Order] - DB에서 선정되지 않은 상품입니다 SKU: {}", autoOrderRequestDto.getSku());
             return false;
+        }
+    }
+
+    /*
+     * 유효한 Size들 DB 로부터 ReqeustDto에 저장 (주문시 유효한 상품 order 넣기)
+     *
+     * */
+    public void setValidSizes(AutoOrderRequestDto autoOrderRequestDto) {
+
+        Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
+        if (autoOrderProduct.isPresent()) {
+            List<ProductSize> productSizes = autoOrderProduct.get().getProductSize();
+            List<String> validSizes = new ArrayList<>();
+            for (ProductSize productSize : productSizes) {
+                if (productSize.isAutoBuy()) {
+                    validSizes.add(productSize.getName());
+                }
+            }
+            autoOrderRequestDto.setValidSizes(validSizes);
         }
 
     }
@@ -119,4 +146,9 @@ public class GnbOrderManager {
         return SeleniumUtil.isSessionAlive(driver);
     }
 
+
+    private Optional<Product> findProduct(AutoOrderRequestDto autoOrderRequestDto) {
+        String noWhiteSpaceSku = autoOrderRequestDto.getSku().replaceAll(" ", "").trim();
+        return productRepository.findAutoOrderProduct(noWhiteSpaceSku, autoOrderRequestDto.getBoutique());
+    }
 }

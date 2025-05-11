@@ -22,12 +22,11 @@ public class AutoOrderController {
     @PostMapping("/order/products")
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody AutoOrderRequestDto autoOrderRequestDto) {
 
-        // 주문 시작
         if (!gnbOrderManager.validateProduct(autoOrderRequestDto)) {
-            // 해당하지 않는 상품
-            log.info("[Auto Order] - DB에서 선정되지 않은 상품입니다 SKU: {}", autoOrderRequestDto.getSku());
+
             return ResponseEntity.ok(false);
         }
+        gnbOrderManager.setValidSizes(autoOrderRequestDto);
         gnbOrderManager.orderProduct(autoOrderRequestDto);
         return ResponseEntity.ok(true);
     }

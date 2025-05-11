@@ -1,11 +1,11 @@
 package search.kream;
 
+import module.discord.DiscordBot;
 import search.analyzer.CompareData;
 import search.analyzer.CompareDataResult;
 import search.analyzer.PriceCompareCore;
 import search.chrome.ChromeDriverTool;
 import search.chrome.ChromeDriverToolFactory;
-import search.discord.DiscordBot;
 import search.discord.DiscordString;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,11 +63,11 @@ public class KreamSearchCore {
             TextChannel allCompareChannel = discordBot.getJda().getChannelById(TextChannel.class, DiscordString.KREAM_COMPARE_ALL_CHANNEL);
             if (compareDataResult.isPassStandard()) {
                 log.info("수익 기준 넘는 제품 등장" + searchProduct);
-                discordBot.getBotCommands().sendSearchAndCompareReport(compareChannel, searchProduct, compareDataResult);
-                discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
+                //discordBot.getBotCommands().sendSearchAndCompareReport(compareChannel, searchProduct, compareDataResult);
+                //discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
             } else {
                 log.info("수익률 안넘음  상품정보 : " + searchProduct + "예상 수익률" + compareDataResult.getDifferenceRate());
-                discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
+                //discordBot.getBotCommands().sendSearchAndCompareReport(allCompareChannel, searchProduct, compareDataResult);
             }
 
             Thread.sleep(500);

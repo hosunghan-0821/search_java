@@ -1,5 +1,6 @@
 package search.order.gnb;
 
+import org.springframework.retry.annotation.Recover;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,9 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -56,6 +59,7 @@ public class GnbOrderService {
         log.info("GNB STEP1 상품 페이지 이동 SUCCESS");
     }
 
+
     /*
      *
      * 상품 검색 쇼핑카트 등록
@@ -76,6 +80,7 @@ public class GnbOrderService {
 
             // 원하는 값들 찾으면
             if (autoOrderRequestDto.getSku().equals(sku)) {
+                Map<String, Integer> orderSizeMap = new HashMap<>();
 
                 try {
                     WebElement imageElement = productElement.findElement(By.xpath(".//img[@class='zoom lozad']"));
@@ -92,18 +97,23 @@ public class GnbOrderService {
 
                 for (WebElement sizeElement : sizeElements) {
                     String size = sizeElement.findElement(By.xpath(".//div[@class='artCod']//div[@class='size']")).getText();
-                    log.info("size : {}", size);
-                    WebElement inputElement = sizeElement.findElement(By.xpath(".//div[@class='artCod']//input"));
-
-                    String placeholder = inputElement.getAttribute("placeholder");
-                    log.info("수량 : {}", placeholder);
-                    if (placeholder.equals("0")) {
-                        log.error("수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
-                        throw new RuntimeException();
-
+                    log.debug("size : {}", size);
+                    if (!autoOrderRequestDto.getValidSizes().contains(size)) {
+                        log.info("해당하는 Size가 아니므로 넘깁니다 :{}", size);
+                        continue;
                     }
-
-                    inputElement.sendKeys(placeholder);
+                    WebElement inputElement = sizeElement.findElement(By.xpath(".//div[@class='artCod']//input"));
+                    String orderNum = inputElement.getAttribute("placeholder");
+                    log.debug("수량 : {}", orderNum);
+                    if (orderNum.equals("0")) {
+                        log.error("수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
+                        continue;
+                    }
+                    inputElement.sendKeys(orderNum);
+                    orderSizeMap.put(size, Integer.valueOf(orderNum));
+                }
+                if (orderSizeMap.isEmpty()) {
+                    throw new RuntimeException("No Order Size");
                 }
 
                 log.info("원하는 상품 찾음");
