@@ -94,14 +94,19 @@ public class GnbOrderManager {
             Color color,
             String... skus
     ) {
-        discordBot.sendAutoOrderMessage(
-                DiscordString.GNB_AUTO_ORDER_CHANNEL,
-                title,
-                makeDiscordSendMessage(dto, title, errorMessage),
-                dto.getProductLink(),
-                skus,
-                color
-        );
+        try {
+            discordBot.sendAutoOrderMessage(
+                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
+                    title,
+                    makeDiscordSendMessage(dto, title, errorMessage),
+                    dto.getProductLink(),
+                    skus,
+                    color
+            );
+        } catch (Exception e) {
+            log.error("DISCORD SNED ERROR:  MESSAGE TITLE: {}", title);
+        }
+
     }
 
     private ChromeDriverTool validateChromeDriverTool(BlockingQueue<ChromeDriverTool> gnbBlockingQueue) throws InterruptedException {
