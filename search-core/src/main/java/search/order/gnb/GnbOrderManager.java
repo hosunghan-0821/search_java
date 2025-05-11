@@ -37,32 +37,21 @@ public class GnbOrderManager {
     private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
     private final DiscordBot discordBot;
 
-    /*
-     *
-     * 이 메소드 자체를 비동기 적으로 돌리는게 나아보임.
-     * 왜? -> Api Response를 너무 오래잡고 있음.
-     * */
     @Async
     public void orderProduct(AutoOrderRequestDto autoOrderRequestDto) {
-
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
         try {
             chromeDriverTool = validateChromeDriverTool(gnbBlockingQueue);
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
             WebDriverWait wait = chromeDriverTool.getWebDriverWait();
-            discordBot.sendAutoOrderMessage(
-                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
-                    "상품 주문 시작",
-                    makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 시작", ""),
-                    autoOrderRequestDto.getProductLink(),
-                    new String[0],
-                    Color.GRAY
-            );
+
+            // 공통 메소드로 추출된 Discord 알림
+            sendAutoOrderNotification("상품 주문 시작", autoOrderRequestDto, "", Color.GRAY);
+
             gnbOrderService.step1(driver, wait, autoOrderRequestDto);
             gnbOrderService.step2(driver, wait, autoOrderRequestDto);
-            //여기까진 병렬적으로 진행되나,
-            // 최종 주문버튼 누르는 것은 직렬적으로 진행.
+
             try {
                 boolean acquired = finalOrderStepLock.tryLock(3, TimeUnit.MINUTES);
                 if (acquired) {
@@ -71,24 +60,17 @@ public class GnbOrderManager {
                     log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), autoOrderRequestDto.getProductLink());
                 }
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // 인터럽트 상태 복원
+                Thread.currentThread().interrupt();
             } catch (Exception e) {
-                log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR MSG : " + e.getMessage());
+                log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR MSG : " + e.getMessage());
             } finally {
                 if (finalOrderStepLock.isHeldByCurrentThread()) {
                     finalOrderStepLock.unlock();
                 }
             }
         } catch (Exception e) {
-            log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + "ERROR msg : " + e.getMessage());
-            discordBot.sendAutoOrderMessage(
-                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
-                    "상품 주문 실패",
-                    makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 실패", e.getMessage()),
-                    autoOrderRequestDto.getProductLink(),
-                    Stream.of(autoOrderRequestDto.getSku()).toArray(String[]::new),
-                    Color.RED
-            );
+            log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR msg : " + e.getMessage());
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, autoOrderRequestDto.getSku());
             return;
         } finally {
             if (chromeDriverTool != null) {
@@ -98,14 +80,27 @@ public class GnbOrderManager {
             }
         }
 
-        //Discord Notice 어떤 상품 자동주문 진행시켰는지 Noti
+        // 성공 알림
+        sendAutoOrderNotification("상품 주문 성공", autoOrderRequestDto, "", Color.GREEN, autoOrderRequestDto.getSku());
+    }
+
+    /**
+     * Discord Bot 알림을 위한 공통 메소드
+     */
+    private void sendAutoOrderNotification(
+            String title,
+            AutoOrderRequestDto dto,
+            String errorMessage,
+            Color color,
+            String... skus
+    ) {
         discordBot.sendAutoOrderMessage(
                 DiscordString.GNB_AUTO_ORDER_CHANNEL,
-                "상품 주문 성공",
-                makeDiscordSendMessage(autoOrderRequestDto, "상품 주문 성공", ""),
-                autoOrderRequestDto.getProductLink(),
-                Stream.of(autoOrderRequestDto.getSku()).toArray(String[]::new),
-                Color.GREEN
+                title,
+                makeDiscordSendMessage(dto, title, errorMessage),
+                dto.getProductLink(),
+                skus,
+                color
         );
     }
 
@@ -119,16 +114,13 @@ public class GnbOrderManager {
                 break;
             }
         }
-
         if (!isValid) {
             chromeDriverTool = seleniumDriverPool.makeSeleniumDriverTool(Boutique.GNB.getName());
         }
-
         return chromeDriverTool;
     }
 
     public boolean validateProduct(AutoOrderRequestDto autoOrderRequestDto) {
-        //DB에서 유효한 상품과 Size인지 확인
         Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
         if (autoOrderProduct.isPresent()) {
             Product product = autoOrderProduct.get();
@@ -144,12 +136,7 @@ public class GnbOrderManager {
         }
     }
 
-    /*
-     * 유효한 Size들 DB 로부터 ReqeustDto에 저장 (주문시 유효한 상품 order 넣기)
-     *
-     * */
     public void setValidSizes(AutoOrderRequestDto autoOrderRequestDto) {
-
         Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
         if (autoOrderProduct.isPresent()) {
             List<ProductSize> productSizes = autoOrderProduct.get().getProductSize();
@@ -161,18 +148,15 @@ public class GnbOrderManager {
             }
             autoOrderRequestDto.setValidSizes(validSizes);
         }
-
     }
 
     private boolean isValidChromeDriver(ChromeDriverTool chromeDriverTool) {
-
         if (chromeDriverTool == null) {
             return false;
         }
         ChromeDriver driver = chromeDriverTool.getChromeDriver();
         return SeleniumUtil.isSessionAlive(driver);
     }
-
 
     private Optional<Product> findProduct(AutoOrderRequestDto autoOrderRequestDto) {
         String noWhiteSpaceSku = autoOrderRequestDto.getSku().replaceAll(" ", "").trim();
@@ -188,6 +172,5 @@ public class GnbOrderManager {
                 autoOrderRequestDto.getSku(),
                 errorMessage
         );
-
     }
 }
