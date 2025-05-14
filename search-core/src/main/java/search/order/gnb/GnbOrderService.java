@@ -180,7 +180,8 @@ public class GnbOrderService {
         wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='swal2-popup swal2-modal swal2-icon-warning swal2-show']")));
         WebElement finalConfirmButton = driver.findElement(By.xpath("//button[@class='swal2-confirm swal2-styled swal2-default-outline']"));
 
-        // 최종 확인 시정에 finalConfirmButton Click();
+        // 최종 확인 시정에 설정.
+        finalConfirmButton.click();
 
     }
 
