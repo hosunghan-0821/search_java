@@ -146,7 +146,7 @@ public class GnbOrderService {
      * 쇼핑 카드 등록한 곳에서 주문 확정
      * */
     @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
-    public void step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
+    public void step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
 
         driver.get("http://93.46.41.5:1995/cart");
 
@@ -171,15 +171,19 @@ public class GnbOrderService {
                 break;
             }
         }
+        Thread.sleep(2000);
 
         if (isOrderSaved) {
             WebElement confirmButton = driver.findElement(By.id("confirm-order"));
             confirmButton.click();
         }
 
+        Thread.sleep(2000);
+
         wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//div[@class='swal2-popup swal2-modal swal2-icon-warning swal2-show']")));
         WebElement finalConfirmButton = driver.findElement(By.xpath("//button[@class='swal2-confirm swal2-styled swal2-default-outline']"));
 
+        Thread.sleep(2000);
         // 최종 확인 시정에 설정.
         finalConfirmButton.click();
 
