@@ -139,14 +139,14 @@ public class GnbOrderService {
             }
         }
         log.error("GNB STEP2 상품 존재하지 않음  sku : {}", autoOrderRequestDto.getSku());
-
+        throw new RuntimeException("GNB STEP2 상품 존재하지 않음");
     }
 
     /*
      * 쇼핑 카드 등록한 곳에서 주문 확정
      * */
     @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
-    public void step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
+    public boolean step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
 
         driver.get("http://93.46.41.5:1995/cart");
 
@@ -186,6 +186,7 @@ public class GnbOrderService {
         Thread.sleep(2000);
         // 최종 확인 시정에 설정.
         finalConfirmButton.click();
+        return true;
 
     }
 

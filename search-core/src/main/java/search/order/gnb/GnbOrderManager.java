@@ -41,13 +41,15 @@ public class GnbOrderManager {
     public void orderProduct(AutoOrderRequestDto autoOrderRequestDto) {
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
+        boolean isOrderSaved = false;
         try {
             chromeDriverTool = validateChromeDriverTool(gnbBlockingQueue);
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
             WebDriverWait wait = chromeDriverTool.getWebDriverWait();
 
+
             // 공통 메소드로 추출된 Discord 알림
-            sendAutoOrderNotification("상품 주문 시작", autoOrderRequestDto, "", Color.GRAY);
+            sendAutoOrderNotification("상품 주문 시작", autoOrderRequestDto, "", Color.GRAY, false);
 
             gnbOrderService.step1(driver, wait, autoOrderRequestDto);
             gnbOrderService.step2(driver, wait, autoOrderRequestDto);
@@ -55,14 +57,16 @@ public class GnbOrderManager {
             try {
                 boolean acquired = finalOrderStepLock.tryLock(3, TimeUnit.MINUTES);
                 if (acquired) {
-                    gnbOrderService.step3(driver, wait, autoOrderRequestDto);
+                    isOrderSaved = gnbOrderService.step3(driver, wait, autoOrderRequestDto);
                 } else {
-                    log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), autoOrderRequestDto.getProductLink());
+                    log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), false, autoOrderRequestDto.getProductLink());
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR MSG : " + e.getMessage());
+                sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, false, autoOrderRequestDto.getSku());
+                return;
             } finally {
                 if (finalOrderStepLock.isHeldByCurrentThread()) {
                     finalOrderStepLock.unlock();
@@ -70,7 +74,7 @@ public class GnbOrderManager {
             }
         } catch (Exception e) {
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR msg : " + e.getMessage());
-            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, autoOrderRequestDto.getSku());
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, false, autoOrderRequestDto.getSku());
             return;
         } finally {
             if (chromeDriverTool != null) {
@@ -81,7 +85,12 @@ public class GnbOrderManager {
         }
 
         // 성공 알림
-        sendAutoOrderNotification("상품 주문 성공", autoOrderRequestDto, "", Color.GREEN, autoOrderRequestDto.getSku());
+        if (isOrderSaved) {
+            sendAutoOrderNotification("상품 주문 성공", autoOrderRequestDto, "", Color.GREEN, true, autoOrderRequestDto.getSku());
+        } else {
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "", Color.RED, false, autoOrderRequestDto.getSku());
+        }
+
     }
 
     /**
@@ -92,11 +101,12 @@ public class GnbOrderManager {
             AutoOrderRequestDto dto,
             String errorMessage,
             Color color,
+            boolean isSuccess,
             String... skus
     ) {
         try {
             discordBot.sendAutoOrderMessage(
-                    DiscordString.GNB_AUTO_ORDER_CHANNEL,
+                    isSuccess ? DiscordString.GNB_AUTO_ORDER_CHANNEL : DiscordString.GNB_AUTO_ORDER_FAIL_CHANNEL,
                     title,
                     makeDiscordSendMessage(dto, title, errorMessage),
                     dto.getProductLink(),
