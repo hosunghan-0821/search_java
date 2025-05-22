@@ -111,6 +111,7 @@ public class GnbOrderService {
                     }
                     inputElement.sendKeys(orderNum);
                     orderSizeMap.put(size, Integer.valueOf(orderNum));
+                    log.info("Size : {}, 수량 : {}", size, orderNum);
                 }
                 if (orderSizeMap.isEmpty()) {
                     throw new RuntimeException("No Order Size");
@@ -173,10 +174,12 @@ public class GnbOrderService {
         }
         Thread.sleep(2000);
 
-        if (isOrderSaved) {
-            WebElement confirmButton = driver.findElement(By.id("confirm-order"));
-            confirmButton.click();
+        if (!isOrderSaved) {
+            return false;
         }
+
+        WebElement confirmButton = driver.findElement(By.id("confirm-order"));
+        confirmButton.click();
 
         Thread.sleep(2000);
 
@@ -187,6 +190,7 @@ public class GnbOrderService {
         // 최종 확인 시정에 설정.
         finalConfirmButton.click();
         return true;
+
 
     }
 
