@@ -15,6 +15,8 @@ import java.util.List;
 @Getter
 public class AutoOrderRequestDto {
 
+    @Setter
+    private Long productId;
     private String boutique;
     private double price;
     private String sku;

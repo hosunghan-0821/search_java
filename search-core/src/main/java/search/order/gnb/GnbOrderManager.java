@@ -6,8 +6,10 @@ import module.database.entity.ProductSize;
 import module.database.repository.ProductRepository;
 import module.discord.DiscordBot;
 import module.discord.DiscordString;
+import org.springframework.transaction.annotation.Transactional;
 import search.chrome.ChromeDriverTool;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
+import search.order.gnb.index.TokenEvaluator;
 import search.pool.SeleniumDriverPool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class GnbOrderManager {
     private final GnbOrderService gnbOrderService;
     private final SeleniumDriverPool seleniumDriverPool;
     private final ProductRepository productRepository;
+    private final TokenEvaluator tokenEvaluator;
     private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
     private final DiscordBot discordBot;
 
@@ -135,10 +138,26 @@ public class GnbOrderManager {
         return chromeDriverTool;
     }
 
+    public Long getValidProductId(AutoOrderRequestDto autoOrderRequestDto) {
+        List<Long> evaluateResult = tokenEvaluator.evaluate(autoOrderRequestDto.getSku());
+        if (evaluateResult.isEmpty()) {
+            return -1L;
+        }
+        return evaluateResult.get(0);
+    }
+
+    @Transactional(readOnly = true)
     public boolean validateProduct(AutoOrderRequestDto autoOrderRequestDto) {
-        Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
+
+        assert (autoOrderRequestDto.getProductId() != null);
+        Optional<Product> autoOrderProduct = productRepository.findById(autoOrderRequestDto.getProductId());
         if (autoOrderProduct.isPresent()) {
             Product product = autoOrderProduct.get();
+            if (!Boutique.GNB.getName().equals(product.getBoutique())) {
+                log.info("[Auto Order] - BOUTIQUE 값이 상이합니다 BOUTIQUE:{} SKU: {}", product.getBoutique(), autoOrderRequestDto.getSku());
+                return false;
+            }
+
             if (product.getPrice() == 0 || autoOrderRequestDto.getPrice() <= product.getPrice()) {
                 return true;
             } else {
@@ -151,8 +170,9 @@ public class GnbOrderManager {
         }
     }
 
+    @Transactional(readOnly = true)
     public void setValidSizes(AutoOrderRequestDto autoOrderRequestDto) {
-        Optional<Product> autoOrderProduct = findProduct(autoOrderRequestDto);
+        Optional<Product> autoOrderProduct = productRepository.findById(autoOrderRequestDto.getProductId());
         if (autoOrderProduct.isPresent()) {
             List<ProductSize> productSizes = autoOrderProduct.get().getProductSize();
             List<String> validSizes = new ArrayList<>();
@@ -174,6 +194,7 @@ public class GnbOrderManager {
     }
 
     private Optional<Product> findProduct(AutoOrderRequestDto autoOrderRequestDto) {
+        //TODO 대문자로 바꾸는것도 필요할듯?
         String noWhiteSpaceSku = autoOrderRequestDto.getSku().replaceAll(" ", "").trim();
         return productRepository.findAutoOrderProduct(noWhiteSpaceSku, autoOrderRequestDto.getBoutique());
     }
