@@ -1,6 +1,7 @@
 package search.order.gnb.index;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ahocorasick.trie.Emit;
 import org.ahocorasick.trie.Trie;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class TokenEvaluator {
@@ -23,6 +25,10 @@ public class TokenEvaluator {
         s = s.toUpperCase();
 
         Trie trie = indexHolder.getMain().get();
+        if (trie == null) {
+            log.error("Trie not started");
+            return List.of();
+        }
         List<Rule> ruleSets = indexHolder.getRules();
         Map<String, List<Integer>> tokenToRules = indexHolder.getTokenToRules();
         Map<Integer, Long> indexToProductId = indexHolder.getIndexToProductId();

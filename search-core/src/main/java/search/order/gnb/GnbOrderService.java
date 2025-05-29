@@ -155,6 +155,7 @@ public class GnbOrderService {
     @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
     public boolean step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
 
+        log.info("GNB STEP3 상품 쇼핑카트내 주문 시작 START");
         driver.get("http://93.46.41.5:1995/cart");
 
         String pattern = "\\S";
@@ -183,6 +184,7 @@ public class GnbOrderService {
         if (!isOrderSaved) {
             return false;
         }
+        log.info("GNB STEP3 상품 쇼핑카트내 상품 들어있는거 확인");
 
         WebElement confirmButton = driver.findElement(By.id("confirm-order"));
         confirmButton.click();
@@ -194,7 +196,8 @@ public class GnbOrderService {
 
         Thread.sleep(2000);
         // 최종 확인 시정에 설정.
-        //finalConfirmButton.click();
+        finalConfirmButton.click();
+        log.info("GNB STEP3 상품 쇼핑카트 내 상품 주문버튼 완료");
         return true;
 
 
