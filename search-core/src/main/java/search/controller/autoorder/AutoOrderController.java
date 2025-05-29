@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.order.gnb.GnbOrderManager;
+import search.order.gnb.index.IndexBootstrap;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ import java.util.List;
 public class AutoOrderController {
 
     private final GnbOrderManager gnbOrderManager;
+    private final IndexBootstrap indexBootstrap;
 
     @PostMapping("/order/products")
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody AutoOrderRequestDto autoOrderRequestDto) {
@@ -30,7 +32,7 @@ public class AutoOrderController {
 
             return ResponseEntity.ok(false);
         }
-        gnbOrderManager.setValidSizes(autoOrderRequestDto);
+        gnbOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
         gnbOrderManager.orderProduct(autoOrderRequestDto);
         return ResponseEntity.ok(true);
     }
@@ -39,7 +41,7 @@ public class AutoOrderController {
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody List<AutoOrderRequestDto> autoOrderRequestDtoList) {
 
         for (AutoOrderRequestDto autoOrderRequestDto : autoOrderRequestDtoList) {
-            Long validProductId = gnbOrderManager.getValidProductId(autoOrderRequestDto);
+            Long validProductId = gnbOrderManager.findTokenAllMatched(autoOrderRequestDto);
             if (validProductId == -1L) {
                 log.info("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
                 continue;
@@ -48,7 +50,7 @@ public class AutoOrderController {
             if (!gnbOrderManager.validateProduct(autoOrderRequestDto)) {
                 continue;
             }
-            gnbOrderManager.setValidSizes(autoOrderRequestDto);
+            gnbOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
             gnbOrderManager.orderProduct(autoOrderRequestDto);
         }
         return ResponseEntity.ok(true);
@@ -62,8 +64,14 @@ public class AutoOrderController {
      */
     @GetMapping("/order/products/sku")
     public ResponseEntity<Long> getValidProductId(@RequestParam String sku) {
-        Long validProductId = gnbOrderManager.getValidProductId(AutoOrderRequestDto.builder().sku(sku).build());
+        Long validProductId = gnbOrderManager.findTokenAllMatched(AutoOrderRequestDto.builder().sku(sku).build());
 
         return ResponseEntity.ok(validProductId);
+    }
+
+    @GetMapping("/order/trie/sync")
+    public ResponseEntity<Boolean> syncDbTrie(){
+        indexBootstrap.init();
+        return ResponseEntity.ok(true);
     }
 }

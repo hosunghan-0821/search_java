@@ -1,6 +1,7 @@
 package search.order.gnb;
 
-import org.springframework.retry.annotation.Recover;
+import module.database.repository.ProductRepository;
+import org.springframework.transaction.annotation.Transactional;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +24,10 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
-
 @RequiredArgsConstructor
 public class GnbOrderService {
 
+    private final ProductRepository productRepository;
 
     @Value("${gebenegozi.user.id}")
     private String userId;
@@ -80,7 +81,7 @@ public class GnbOrderService {
 
             // 원하는 값들 찾으면
             if (autoOrderRequestDto.getSku().equals(sku)) {
-                Map<String, Integer> orderSizeMap = new HashMap<>();
+                Map<String, Long> orderSizeMap = new HashMap<>();
 
                 try {
                     WebElement imageElement = productElement.findElement(By.xpath(".//img[@class='zoom lozad']"));
@@ -103,15 +104,20 @@ public class GnbOrderService {
                         continue;
                     }
                     WebElement inputElement = sizeElement.findElement(By.xpath(".//div[@class='artCod']//input"));
-                    String orderNum = inputElement.getAttribute("placeholder");
-                    log.debug("수량 : {}", orderNum);
-                    if (orderNum.equals("0")) {
+                    String productSizeMaxOrderNum = inputElement.getAttribute("placeholder");
+
+                    long validOrderNum = Math.min(Long.parseLong(productSizeMaxOrderNum), autoOrderRequestDto.getOrderNum());
+                    log.debug("사이트 사이즈 수량 : {}, DB 사이즈 수량: {} , 사려는 수량 : {}", productSizeMaxOrderNum, autoOrderRequestDto.getOrderNum(), validOrderNum);
+
+                    if (validOrderNum == 0) {
                         log.error("수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
                         continue;
                     }
-                    inputElement.sendKeys(orderNum);
-                    orderSizeMap.put(size, Integer.valueOf(orderNum));
-                    log.info("Size : {}, 수량 : {}", size, orderNum);
+                    //주문완료되면 차감해야함.
+                    autoOrderRequestDto.setOrderNum(autoOrderRequestDto.getOrderNum() - validOrderNum);
+                    inputElement.sendKeys(String.valueOf(validOrderNum));
+                    orderSizeMap.put(size, validOrderNum);
+                    log.info("Size : {}, 수량 : {}", size, validOrderNum);
                 }
                 if (orderSizeMap.isEmpty()) {
                     throw new RuntimeException("No Order Size");
@@ -188,7 +194,7 @@ public class GnbOrderService {
 
         Thread.sleep(2000);
         // 최종 확인 시정에 설정.
-        finalConfirmButton.click();
+        //finalConfirmButton.click();
         return true;
 
 
@@ -225,5 +231,10 @@ public class GnbOrderService {
 
         submitButton.click();
         wait.until(ExpectedConditions.presenceOfElementLocated(By.id("containerLineeModal")));
+    }
+
+    @Transactional
+    public void updateOrderNum(long productId, long remainCount) {
+        productRepository.updateOrderNum(productId, remainCount);
     }
 }

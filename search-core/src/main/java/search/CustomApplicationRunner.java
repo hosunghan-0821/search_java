@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import search.chrome.ChromeDriverTool;
 import search.kream.KreamSearchCore;
 import search.order.gnb.GnbOrderService;
+import search.order.gnb.index.IndexBootstrap;
 import search.pool.SeleniumDriverPool;
 
 import java.util.List;

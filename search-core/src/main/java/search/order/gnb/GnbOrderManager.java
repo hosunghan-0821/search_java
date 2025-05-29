@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Component
@@ -90,6 +89,7 @@ public class GnbOrderManager {
         // 성공 알림
         if (isOrderSaved) {
             sendAutoOrderNotification("상품 주문 성공", autoOrderRequestDto, "", Color.GREEN, true, autoOrderRequestDto.getSku());
+            gnbOrderService.updateOrderNum(autoOrderRequestDto.getProductId(), autoOrderRequestDto.getOrderNum());
         } else {
             sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "", Color.RED, false, autoOrderRequestDto.getSku());
         }
@@ -138,7 +138,10 @@ public class GnbOrderManager {
         return chromeDriverTool;
     }
 
-    public Long getValidProductId(AutoOrderRequestDto autoOrderRequestDto) {
+    /*
+    * 토큰값이 유효한 것들을 갖옴
+    * */
+    public Long findTokenAllMatched(AutoOrderRequestDto autoOrderRequestDto) {
         List<Long> evaluateResult = tokenEvaluator.evaluate(autoOrderRequestDto.getSku());
         if (evaluateResult.isEmpty()) {
             return -1L;
@@ -171,7 +174,7 @@ public class GnbOrderManager {
     }
 
     @Transactional(readOnly = true)
-    public void setValidSizes(AutoOrderRequestDto autoOrderRequestDto) {
+    public void setValidSizesAndOrderNum(AutoOrderRequestDto autoOrderRequestDto) {
         Optional<Product> autoOrderProduct = productRepository.findById(autoOrderRequestDto.getProductId());
         if (autoOrderProduct.isPresent()) {
             List<ProductSize> productSizes = autoOrderProduct.get().getProductSize();
@@ -182,6 +185,7 @@ public class GnbOrderManager {
                 }
             }
             autoOrderRequestDto.setValidSizes(validSizes);
+            autoOrderRequestDto.setOrderNum(autoOrderProduct.get().getCount());
         }
     }
 

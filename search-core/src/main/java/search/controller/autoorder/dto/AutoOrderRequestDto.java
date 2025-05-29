@@ -23,5 +23,7 @@ public class AutoOrderRequestDto {
     private String id;
     private String productLink;
     @Setter
+    private long orderNum;
+    @Setter
     private List<String> validSizes;
 }
