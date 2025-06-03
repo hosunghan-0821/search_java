@@ -160,9 +160,16 @@ public class GnbOrderManager {
      * */
     public Long findTokenAllMatched(AutoOrderRequestDto autoOrderRequestDto) {
         List<Long> evaluateResult = tokenEvaluator.evaluate(autoOrderRequestDto.getSku());
+
+        if (evaluateResult == null) {
+            log.info("evaluateResult null 이유파악 필요");
+            return -1L;
+        }
         if (evaluateResult.isEmpty()) {
             return -1L;
         }
+
+        evaluateResult.forEach(v -> System.out.println("sku : " + autoOrderRequestDto.getSku() + "허용한 상품 ID : " + v));
         return evaluateResult.get(0);
     }
 

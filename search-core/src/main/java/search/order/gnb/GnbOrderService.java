@@ -196,7 +196,7 @@ public class GnbOrderService {
 
         Thread.sleep(2000);
         // 최종 확인 시정에 설정.
-        finalConfirmButton.click();
+        //finalConfirmButton.click();
         log.info("GNB STEP3 상품 쇼핑카트 내 상품 주문버튼 완료");
         return true;
 
