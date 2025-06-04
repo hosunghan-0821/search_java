@@ -205,9 +205,7 @@ public class GnbOrderManager {
             List<ProductSize> productSizes = autoOrderProduct.get().getProductSize();
             List<String> validSizes = new ArrayList<>();
             for (ProductSize productSize : productSizes) {
-                if (productSize.isAutoBuy()) {
-                    validSizes.add(productSize.getName());
-                }
+                validSizes.add(productSize.getName());
             }
             autoOrderRequestDto.setValidSizes(validSizes);
             autoOrderRequestDto.setOrderNum(autoOrderProduct.get().getCount());
