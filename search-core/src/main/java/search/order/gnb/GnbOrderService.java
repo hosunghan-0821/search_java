@@ -4,7 +4,7 @@ import module.database.repository.ProductRepository;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.transaction.annotation.Transactional;
-import search.common.log.Buffered;
+import search.common.exception.ProductSearchFailException;
 import search.common.log.BufferedLog;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import search.order.gnb.dto.OrderResultDto;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,10 +49,9 @@ public class GnbOrderService {
     /*
      * 상품 페이지 이동
      * */
-    @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
+    @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 2000))
     public void step1(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
-        log.info("GNB STEP1 상품 페이지 이동 START  SKU: {}", autoOrderRequestDto.getSku());
         BufferedLog.info("GNB STEP1 상품 페이지 이동 START  SKU: {}", autoOrderRequestDto.getSku());
         validateLogin(driver, wait, autoOrderRequestDto);
 
@@ -66,7 +67,6 @@ public class GnbOrderService {
         String pattern = "\\S";
         Pattern p = Pattern.compile(pattern);
         wait.until(ExpectedConditions.textMatches(By.xpath("//div[@class='row title font-italic text-capitalize artPrezzi']//div[@class='col-5']"), p));
-        log.info("GNB STEP1 상품 페이지 이동 SUCCESS");
         BufferedLog.info("GNB STEP1 상품 페이지 이동 SUCCESS  SKU: {}", autoOrderRequestDto.getSku());
     }
 
@@ -75,10 +75,9 @@ public class GnbOrderService {
      *
      * 상품 검색 쇼핑카트 등록
      * */
-    @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
+    @Retryable(retryFor = {TimeoutException.class, ProductSearchFailException.class}, backoff = @Backoff(delay = 1000))
     public void step2(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 
-        log.info("GNB STEP2 상품 검색 쇼핑카트 등록 START SKU: {}", autoOrderRequestDto.getSku());
         BufferedLog.info("GNB STEP2 상품 검색 쇼핑카트 등록 START SKU: {}", autoOrderRequestDto.getSku());
 
         List<WebElement> elements = driver.findElements(By.xpath("//div[@class='shopping-cart mb-3']"));
@@ -114,7 +113,6 @@ public class GnbOrderService {
                     if (!autoOrderRequestDto.getValidSizes().contains(size)) {
                         List<String> validSizes = Optional.of(autoOrderRequestDto.getValidSizes()).orElse(Collections.emptyList());
                         String productSizes = String.join(",", validSizes);
-                        log.info("해당하는 Size가 아니므로 넘깁니다 :{}", size);
                         BufferedLog.info("해당하는 Size가 아니므로 넘깁니다 | GNB SIZE {} | MY SIZE {}", size, productSizes);
                         continue;
                     }
@@ -122,10 +120,8 @@ public class GnbOrderService {
                     String productSizeMaxOrderNum = inputElement.getAttribute("placeholder");
 
                     long validOrderNum = Math.min(Long.parseLong(productSizeMaxOrderNum), autoOrderRequestDto.getOrderNum());
-                    log.debug("사이트 사이즈 수량 : {}, DB 사이즈 수량: {} , 사려는 수량 : {}", productSizeMaxOrderNum, autoOrderRequestDto.getOrderNum(), validOrderNum);
                     BufferedLog.info("사이트 수량 : {}, DB 수량: {} , 사려는 수량 : {}", productSizeMaxOrderNum, autoOrderRequestDto.getOrderNum(), validOrderNum);
                     if (validOrderNum == 0) {
-                        log.error("DB 수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
                         BufferedLog.error("DB 수량: 0개 이므로 주문을 할 수 없습니다. SKU : {} \t Product Link : {}", sku, autoOrderRequestDto.getProductLink());
                         continue;
                     }
@@ -133,7 +129,6 @@ public class GnbOrderService {
                     autoOrderRequestDto.setOrderNum(autoOrderRequestDto.getOrderNum() - validOrderNum);
                     inputElement.sendKeys(String.valueOf(validOrderNum));
                     orderSizeMap.put(size, validOrderNum);
-                    log.info("Size : {}, 수량 : {}", size, validOrderNum);
                     BufferedLog.info("Size : {}, 수량 : {}", size, validOrderNum);
                 }
                 if (orderSizeMap.isEmpty()) {
@@ -141,7 +136,6 @@ public class GnbOrderService {
                     throw new RuntimeException("No Order Size");
                 }
 
-                log.info("원하는 상품 찾음");
                 BufferedLog.info("원하는 상품 찾음");
 
                 WebElement buttonElement = productElement.findElement(By.xpath(".//button[@class='btn btn-sm btn-sirio add-item-cart mt-3 ml-5']"));
@@ -152,7 +146,6 @@ public class GnbOrderService {
                 } catch (Exception e) {
                     String text = productElement.findElement(By.xpath("//div[@class='col-12 mb-2 font-weight-bold']")).getText();
                     if (text.equals("Items in cart")) {
-                        log.info("GNB STEP2 상품 검색 쇼핑카트 등록 FINISH");
                         BufferedLog.info("GNB STEP2 상품 검색 쇼핑카트 등록 FINISH");
                         return;
                     } else {
@@ -160,24 +153,21 @@ public class GnbOrderService {
                     }
 
                 }
-
-                log.info("GNB STEP2 상품 검색 쇼핑카트 등록 FINISH");
                 BufferedLog.info("GNB STEP2 상품 검색 쇼핑카트 등록 FINISH");
                 return;
             }
         }
         log.error("GNB STEP2 상품 존재하지 않음  sku : {}", autoOrderRequestDto.getSku());
         BufferedLog.error("GNB STEP2 상품 존재하지 않음");
-        throw new RuntimeException("GNB STEP2 상품 존재하지 않음");
+        throw new ProductSearchFailException("GNB STEP2 상품 존재하지 않음");
     }
 
     /*
      * 쇼핑 카드 등록한 곳에서 주문 확정
      * */
     @Retryable(retryFor = {TimeoutException.class}, backoff = @Backoff(delay = 1000))
-    public boolean step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
+    public OrderResultDto step3(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
 
-        log.info("GNB STEP3 상품 쇼핑카트내 주문 시작 START sku: {}", autoOrderRequestDto.getSku());
         BufferedLog.info("GNB STEP3 상품 쇼핑카트내 주문 시작 START sku: {}", autoOrderRequestDto.getSku());
         driver.get("http://93.46.41.5:1995/cart");
 
@@ -190,25 +180,39 @@ public class GnbOrderService {
         boolean isOrderSaved = false;
         //상품 존재하는지 확인.
 
+        List<OrderResultDto.OrderInfo> orderInfo = new ArrayList<>();
         for (WebElement productElement : elements) {
 
             //상품정보
             WebElement infoElement = productElement.findElement(By.xpath(".//div[@class='row title font-italic text-capitalize']"));
             List<WebElement> dataList = infoElement.findElements(By.xpath(".//div[@class='col-5']"));
             String sku = dataList.get(1).getText();
+            Map<String, String> sizeOrderMap = new HashMap<>();
+            try {
+                List<WebElement> sizeInfoElements = productElement.findElements(By.xpath(".//div[@class='row col-12 mb-2 mt-5 art']//div[@class='col-1 mr-1']"));
+                for (WebElement sizeInfoElement : sizeInfoElements) {
+                    String size = sizeInfoElement.findElement(By.xpath(".//div[@class='mr-1']")).getText();
+                    WebElement inputElement = sizeInfoElement.findElement(By.xpath(".//input[@class='form-control form-control-sm qta-ord']"));
+                    String orderNum = inputElement.getAttribute("placeholder");
+                    sizeOrderMap.putIfAbsent(size, orderNum);
+                    BufferedLog.info("STEP3 주문 SKU: {} , SIZE: {}, NUM : {}", sku, size, orderNum);
+                }
+            } catch (Exception e) {
+                log.error("SIZE ORDER_NUM 정보 얻기 실패");
+            }
+
 
             if (autoOrderRequestDto.getSku().equals(sku)) {
                 isOrderSaved = true;
-                break;
             }
+            orderInfo.add(new OrderResultDto.OrderInfo(sku, sizeOrderMap));
         }
         Thread.sleep(2000);
 
         if (!isOrderSaved) {
-            return false;
+            return new OrderResultDto(false, orderInfo);
         }
 
-        log.info("GNB STEP3 상품 쇼핑카트내 상품 들어있는거 확인");
         BufferedLog.info("GNB STEP3 상품 쇼핑카트내 상품 들어있는거 확인");
 
         // 최종 확인 시정에 설정.
@@ -227,10 +231,9 @@ public class GnbOrderService {
             finalConfirmButton.click();
         }
 
-        log.info("GNB STEP3 상품 쇼핑카트 내 상품 주문버튼 완료");
         BufferedLog.info("GNB STEP3 상품 쇼핑카트 내 상품 주문버튼 완료");
-        return true;
 
+        return new OrderResultDto(true, orderInfo);
 
     }
 

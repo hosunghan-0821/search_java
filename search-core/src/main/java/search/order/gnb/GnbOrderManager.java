@@ -11,7 +11,9 @@ import org.springframework.core.env.Profiles;
 import org.springframework.transaction.annotation.Transactional;
 import search.chrome.ChromeDriverTool;
 import search.common.log.Buffered;
+import search.common.log.BufferedLog;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
+import search.order.gnb.dto.OrderResultDto;
 import search.order.gnb.index.TokenEvaluator;
 import search.pool.SeleniumDriverPool;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import search.util.SeleniumUtil;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +51,7 @@ public class GnbOrderManager {
     public void orderProduct(AutoOrderRequestDto autoOrderRequestDto) {
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
-        boolean isOrderSaved = false;
+        OrderResultDto orderResultDto = null;
         try {
             chromeDriverTool = validateChromeDriverTool(gnbBlockingQueue);
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
@@ -64,7 +67,7 @@ public class GnbOrderManager {
             try {
                 boolean acquired = finalOrderStepLock.tryLock(3, TimeUnit.MINUTES);
                 if (acquired) {
-                    isOrderSaved = gnbOrderService.step3(driver, wait, autoOrderRequestDto);
+                    orderResultDto = gnbOrderService.step3(driver, wait, autoOrderRequestDto);
                 } else {
                     log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), autoOrderRequestDto.getProductLink());
                 }
@@ -81,7 +84,7 @@ public class GnbOrderManager {
             }
         } catch (Exception e) {
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR msg : " + e.getMessage());
-            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED,"FAIL" ,autoOrderRequestDto.getSku());
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, "FAIL", autoOrderRequestDto.getSku());
             return;
         } finally {
             if (chromeDriverTool != null) {
@@ -91,11 +94,34 @@ public class GnbOrderManager {
             }
         }
 
-        // 성공 알림
-        if (isOrderSaved) {
-            sendAutoOrderNotification("상품 주문 성공", autoOrderRequestDto, "", Color.GREEN, "SUCCESS", autoOrderRequestDto.getSku());
-            gnbOrderService.updateOrderNum(autoOrderRequestDto.getProductId(), autoOrderRequestDto.getOrderNum());
-            log.info("GNB STEP3 상품 개수 차감 완료");
+        // 성공 알림 비동기로 빼도 될듯하다 .(이미 비동기 스레드여서 문제 없으려나)
+        if (Objects.nonNull(orderResultDto) && orderResultDto.isOrderSaved()) {
+
+            for (OrderResultDto.OrderInfo orderInfo : orderResultDto.getOrders()) {
+                Long productId = this.findTokenAllMatched(orderInfo.getSku());
+                if (productId == -1L) {
+                    sendAutoOrderNotification("DB 차감 에러", AutoOrderRequestDto.builder().sku(orderInfo.getSku()).build(), String.format("주문내역 확인 후 DB차감 개수 수기 변경 필요합니다. SKU:%s", orderInfo.getSku()), Color.RED, "FAIL");
+                    BufferedLog.error("DB 차감 개수 실패로, 주문내역 확인 후 차감개수 변경 필요합니다. SKU:{}", orderInfo.getSku());
+                    continue;
+                }
+                long totalOrderNum = 0L;
+                StringBuilder sizeOrderBuilder = new StringBuilder();
+                sizeOrderBuilder.append("\n");
+                for (var entry : orderInfo.getSizeOrderNumMap().entrySet()) {
+                    try {
+                        long orderNum = Long.parseLong(entry.getValue().trim());
+                        sizeOrderBuilder.append(String.format("SIZE : %s NUM: %s", entry.getKey(), entry.getValue()));
+                        sizeOrderBuilder.append("\n");
+                        totalOrderNum += orderNum;
+                    } catch (Exception e) {
+                        BufferedLog.error("상품 주문 개수 parsing error Parsing String : {}, KEY: {}", entry.getValue(), entry.getKey());
+                    }
+                }
+
+                gnbOrderService.updateOrderNum(productId, totalOrderNum);
+                BufferedLog.info("GNB STEP3 상품 개수 차감 완료");
+                sendAutoOrderNotification("상품 주문 성공", productId.equals(autoOrderRequestDto.getProductId()) ? autoOrderRequestDto : AutoOrderRequestDto.builder().sku(orderInfo.getSku()).build(), "", Color.GREEN, "SUCCESS", orderInfo.getSku(), sizeOrderBuilder.toString());
+            }
         } else {
             sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "STEP3 실패 장바구니에 상품이 있는지 확인하세요 | 다른 주문과 동시에 들어갈 수 있습니다.", Color.RED, "FAIL", autoOrderRequestDto.getSku());
         }
@@ -105,20 +131,14 @@ public class GnbOrderManager {
     /**
      * Discord Bot 알림을 위한 공통 메소드
      */
-    private void sendAutoOrderNotification(
-            String title,
-            AutoOrderRequestDto dto,
-            String errorMessage,
-            Color color,
-            String sendType,
-            String... skus
+    private void sendAutoOrderNotification(String title, AutoOrderRequestDto dto, String errorMessage, Color color, String sendType, String... skus
 
     ) {
         Long discordChannel = null;
 
         boolean isDev = env.acceptsProfiles(Profiles.of("dev"));   // ★ 현재 dev?
 
-        if(isDev) {
+        if (isDev) {
             discordChannel = DiscordString.GNB_TEST_ORDER_LOG_CHANNEL;
         } else {
             switch (sendType) {
@@ -137,16 +157,8 @@ public class GnbOrderManager {
         }
 
 
-
         try {
-            discordBot.sendAutoOrderMessage(
-                    discordChannel,
-                    title,
-                    makeDiscordSendMessage(dto, title, errorMessage),
-                    dto.getProductLink(),
-                    skus,
-                    color
-            );
+            discordBot.sendAutoOrderMessage(discordChannel, title, makeDiscordSendMessage(dto, title, errorMessage), dto.getProductLink(), skus, color);
         } catch (Exception e) {
             log.error("DISCORD SNED ERROR:  MESSAGE TITLE: {}", title);
         }
@@ -172,8 +184,8 @@ public class GnbOrderManager {
     /*
      * 토큰값이 유효한 것들을 갖옴
      * */
-    public Long findTokenAllMatched(AutoOrderRequestDto autoOrderRequestDto) {
-        List<Long> evaluateResult = tokenEvaluator.evaluate(autoOrderRequestDto.getSku());
+    public Long findTokenAllMatched(String sku) {
+        List<Long> evaluateResult = tokenEvaluator.evaluate(sku);
 
         if (evaluateResult == null) {
             log.info("evaluateResult null 이유파악 필요");
@@ -183,7 +195,7 @@ public class GnbOrderManager {
             return -1L;
         }
 
-        evaluateResult.forEach(v -> System.out.println("sku : " + autoOrderRequestDto.getSku() + "허용한 상품 ID : " + v));
+        evaluateResult.forEach(v -> System.out.println("sku : " + sku + "허용한 상품 ID : " + v));
         return evaluateResult.get(0);
     }
 
@@ -244,13 +256,6 @@ public class GnbOrderManager {
     }
 
     private String makeDiscordSendMessage(AutoOrderRequestDto autoOrderRequestDto, String headerMessage, String errorMessage) {
-        return String.format(
-                "%s%n" +
-                        "sku                : %s%n" +
-                        "오류 메시지        : %s",
-                headerMessage,
-                autoOrderRequestDto.getSku(),
-                errorMessage
-        );
+        return String.format("%s%n" + "sku                : %s%n" + "오류 메시지        : %s", headerMessage, autoOrderRequestDto.getSku(), errorMessage);
     }
 }

@@ -41,7 +41,7 @@ public class AutoOrderController {
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody List<AutoOrderRequestDto> autoOrderRequestDtoList) {
 
         for (AutoOrderRequestDto autoOrderRequestDto : autoOrderRequestDtoList) {
-            Long validProductId = gnbOrderManager.findTokenAllMatched(autoOrderRequestDto);
+            Long validProductId = gnbOrderManager.findTokenAllMatched(autoOrderRequestDto.getSku());
             if (validProductId == -1L) {
                 log.debug("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
                 continue;
@@ -64,7 +64,7 @@ public class AutoOrderController {
      */
     @GetMapping("/order/products/sku")
     public ResponseEntity<Long> getValidProductId(@RequestParam String sku) {
-        Long validProductId = gnbOrderManager.findTokenAllMatched(AutoOrderRequestDto.builder().sku(sku).build());
+        Long validProductId = gnbOrderManager.findTokenAllMatched(sku);
 
         return ResponseEntity.ok(validProductId);
     }
