@@ -43,7 +43,7 @@ public class AutoOrderController {
         for (AutoOrderRequestDto autoOrderRequestDto : autoOrderRequestDtoList) {
             Long validProductId = gnbOrderManager.findTokenAllMatched(autoOrderRequestDto.getSku());
             if (validProductId == -1L) {
-                log.debug("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
+                log.info("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
                 continue;
             }
             autoOrderRequestDto.setProductId(validProductId);

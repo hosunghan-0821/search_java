@@ -27,14 +27,16 @@ public class TokenEvaluator {
         //무조건 대문자로 비교 // 토큰 입력도 대문자로 되어 있음.
         s = s.toUpperCase();
 
-        Trie trie = indexHolder.getMain().get();
+        IndexHolder.Snapshot snap = indexHolder.getRef().get();// <- ref.get()
+        Trie trie = snap.trie();
+
         if (trie == null) {
             log.error("Trie not started");
             return List.of();
         }
-        List<Rule> ruleSets = indexHolder.getRules();
-        Map<String, List<Integer>> tokenToRules = indexHolder.getTokenToRules();
-        Map<Integer, Long> indexToProductId = indexHolder.getIndexToProductId();
+        List<Rule> ruleSets = snap.rules();
+        Map<String, List<Integer>> tokenToRules = snap.tokenToRules();
+        Map<Integer, Long> indexToProductId = snap.indexToProductId();
 
         int ruleCount = ruleSets.size();
         int[] remain = new int[ruleCount];
