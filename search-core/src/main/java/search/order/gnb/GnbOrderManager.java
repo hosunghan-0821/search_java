@@ -6,8 +6,11 @@ import module.database.entity.ProductSize;
 import module.database.repository.ProductRepository;
 import module.discord.DiscordBot;
 import module.discord.DiscordString;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.transaction.annotation.Transactional;
 import search.chrome.ChromeDriverTool;
+import search.common.log.Buffered;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.order.gnb.index.TokenEvaluator;
 import search.pool.SeleniumDriverPool;
@@ -38,8 +41,10 @@ public class GnbOrderManager {
     private final TokenEvaluator tokenEvaluator;
     private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
     private final DiscordBot discordBot;
+    private final Environment env;
 
     @Async
+    @Buffered
     public void orderProduct(AutoOrderRequestDto autoOrderRequestDto) {
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
@@ -76,7 +81,7 @@ public class GnbOrderManager {
             }
         } catch (Exception e) {
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR msg : " + e.getMessage());
-            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED, autoOrderRequestDto.getSku());
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, e.getMessage(), Color.RED,"FAIL" ,autoOrderRequestDto.getSku());
             return;
         } finally {
             if (chromeDriverTool != null) {
@@ -92,7 +97,7 @@ public class GnbOrderManager {
             gnbOrderService.updateOrderNum(autoOrderRequestDto.getProductId(), autoOrderRequestDto.getOrderNum());
             log.info("GNB STEP3 상품 개수 차감 완료");
         } else {
-            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "", Color.RED, "FAIL", autoOrderRequestDto.getSku());
+            sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "STEP3 실패 장바구니에 상품이 있는지 확인하세요 | 다른 주문과 동시에 들어갈 수 있습니다.", Color.RED, "FAIL", autoOrderRequestDto.getSku());
         }
 
     }
@@ -110,19 +115,28 @@ public class GnbOrderManager {
 
     ) {
         Long discordChannel = null;
-        switch (sendType) {
-            case "SUCCESS":
-                discordChannel = DiscordString.GNB_AUTO_ORDER_CHANNEL;
-                break;
-            case "FAIL":
-                discordChannel = DiscordString.GNB_AUTO_ORDER_FAIL_CHANNEL;
-                break;
-            case "LOG":
-                discordChannel = DiscordString.GNB_AUTO_ORDER_LOG_CHANNEL;
-                break;
-            default:
-                break;
+
+        boolean isDev = env.acceptsProfiles(Profiles.of("dev"));   // ★ 현재 dev?
+
+        if(isDev) {
+            discordChannel = DiscordString.GNB_TEST_ORDER_LOG_CHANNEL;
+        } else {
+            switch (sendType) {
+                case "SUCCESS":
+                    discordChannel = DiscordString.GNB_AUTO_ORDER_CHANNEL;
+                    break;
+                case "FAIL":
+                    discordChannel = DiscordString.GNB_AUTO_ORDER_FAIL_CHANNEL;
+                    break;
+                case "LOG":
+                    discordChannel = DiscordString.GNB_AUTO_ORDER_LOG_CHANNEL;
+                    break;
+                default:
+                    break;
+            }
         }
+
+
 
         try {
             discordBot.sendAutoOrderMessage(
