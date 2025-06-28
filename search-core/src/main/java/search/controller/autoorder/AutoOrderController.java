@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.order.common.CommonOrderManager;
-import search.order.gnb.GnbOrderManager;
+import search.order.common.OrderManager;
 import search.order.common.index.IndexBootstrap;
+import search.order.julian.JulianOrderManager;
 
+import java.awt.*;
 import java.util.List;
 
 @RestController
@@ -26,6 +28,7 @@ public class AutoOrderController {
 
     private final CommonOrderManager commonOrderManager;
     private final IndexBootstrap indexBootstrap;
+    private final JulianOrderManager julianOrderManager;
 
     @PostMapping("/order/products/bulk")
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody List<AutoOrderRequestDto> autoOrderRequestDtoList) {
@@ -41,10 +44,18 @@ public class AutoOrderController {
                 continue;
             }
             commonOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
+            if (autoOrderRequestDto.getOrderNum() == 0) {
+                commonOrderManager.sendNotificationService("상품 주문 실패", autoOrderRequestDto, "재고 0", Color.RED, "FAIL");
+                continue;
+            }
             // Boutique 맞춰서 OrderManager 가져와서 처리
+            OrderManager autoOrderManagerOrNull = commonOrderManager.getAutoOrderManagerOrNull(autoOrderRequestDto.getBoutique());
+            if (autoOrderManagerOrNull != null) {
+                autoOrderManagerOrNull.orderProduct(autoOrderRequestDto);
+            } else {
+                log.error("CANNOT FIND AUTO ORDER MANAGER :{}", autoOrderRequestDto.getBoutique());
+            }
 
-//            commonOrderManager.getOrderManager
-//            gnbOrderManager.orderProduct(autoOrderRequestDto);
         }
         return ResponseEntity.ok(true);
     }

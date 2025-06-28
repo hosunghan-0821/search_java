@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.order.common.index.TokenEvaluator;
+import search.order.gnb.GnbOrderManager;
+import search.order.julian.JulianOrderManager;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ public class CommonOrderManager {
     private final TokenEvaluator tokenEvaluator;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
+    private final JulianOrderManager julianOrderManager;
+    private final GnbOrderManager gnbOrderManager;
 
     /*
      * 토큰값이 유효한 것들을 갖옴
@@ -53,7 +57,7 @@ public class CommonOrderManager {
         Optional<Product> autoOrderProduct = productRepository.findById(autoOrderRequestDto.getProductId());
         if (autoOrderProduct.isPresent()) {
             Product product = autoOrderProduct.get();
-            if (!Boutique.GNB.getName().equals(product.getBoutique())) {
+            if (!autoOrderRequestDto.getBoutique().equals(product.getBoutique())) {
                 log.info("[Auto Order] - BOUTIQUE 값이 상이합니다 BOUTIQUE:{} SKU: {}", product.getBoutique(), autoOrderRequestDto.getSku());
                 return false;
             }
@@ -71,7 +75,6 @@ public class CommonOrderManager {
         }
     }
 
-
     @Transactional(readOnly = true)
     public void setValidSizesAndOrderNum(AutoOrderRequestDto autoOrderRequestDto) {
         Optional<Product> autoOrderProduct = productRepository.findById(autoOrderRequestDto.getProductId());
@@ -83,9 +86,22 @@ public class CommonOrderManager {
             }
             autoOrderRequestDto.setValidSizes(validSizes);
             autoOrderRequestDto.setOrderNum(autoOrderProduct.get().getCount());
-            if (autoOrderProduct.get().getCount() == 0) {
-                notificationService.sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "재고 0", Color.RED, "FAIL", autoOrderRequestDto.getSku());
-            }
         }
+    }
+
+    public void sendNotificationService(String title, AutoOrderRequestDto autoOrderRequestDto, String errorMessage, Color color, String sendType) {
+        notificationService.sendAutoOrderNotification(title, autoOrderRequestDto, errorMessage, color, sendType, autoOrderRequestDto.getSku());
+
+    }
+
+    public OrderManager getAutoOrderManagerOrNull(String boutique) {
+
+        if (Boutique.JULIAN.getName().equals(boutique)) {
+            return julianOrderManager;
+        } else if (Boutique.GNB.getName().equals(boutique)) {
+            return gnbOrderManager;
+        }
+
+        return null;
     }
 }

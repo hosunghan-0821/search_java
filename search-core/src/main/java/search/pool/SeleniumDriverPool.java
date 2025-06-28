@@ -1,6 +1,7 @@
 package search.pool;
 
 import lombok.extern.slf4j.Slf4j;
+import module.database.dto.Boutique;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import search.chrome.ChromeDriverTool;
@@ -68,7 +69,7 @@ public class SeleniumDriverPool implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.initBrandSeleniumDriver("GNB", 2);
-        this.initBrandSeleniumDriver("JULIAN",2);
+        this.initBrandSeleniumDriver(Boutique.GNB.getName(), 0);
+        this.initBrandSeleniumDriver(Boutique.JULIAN.getName(), 1);
     }
 }

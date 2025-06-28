@@ -12,6 +12,7 @@ import search.common.log.Buffered;
 import search.common.log.BufferedLog;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
 import search.order.common.NotificationService;
+import search.order.common.OrderManager;
 import search.order.common.dto.OrderResultDto;
 import search.order.common.index.TokenEvaluator;
 import search.pool.SeleniumDriverPool;
@@ -27,7 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 @Component
 @Slf4j
-public class GnbOrderManager {
+public class GnbOrderManager implements OrderManager {
 
     private final GnbOrderService gnbOrderService;
     private final SeleniumDriverPool seleniumDriverPool;
@@ -38,6 +39,7 @@ public class GnbOrderManager {
 
     @Async
     @Buffered
+    @Override
     public void orderProduct(AutoOrderRequestDto autoOrderRequestDto) {
         BlockingQueue<ChromeDriverTool> gnbBlockingQueue = seleniumDriverPool.getBrandBlockingQueue(Boutique.GNB.getName());
         ChromeDriverTool chromeDriverTool = null;
