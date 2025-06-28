@@ -1,4 +1,4 @@
-package search.order.gnb.index;
+package search.order.common.index;
 
 import lombok.RequiredArgsConstructor;
 import module.database.entity.ProductSkuToken;

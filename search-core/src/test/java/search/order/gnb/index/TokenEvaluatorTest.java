@@ -1,8 +1,10 @@
 package search.order.gnb.index;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import search.order.common.index.IndexHolder;
+import search.order.common.index.Rule;
+import search.order.common.index.TokenEvaluator;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import search.order.gnb.dto.OrderResultDto;
+import search.order.common.dto.OrderResultDto;
 
 import java.util.ArrayList;
 import java.util.Collections;

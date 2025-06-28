@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import search.controller.autoorder.dto.AutoOrderRequestDto;
+import search.order.common.CommonOrderManager;
 import search.order.gnb.GnbOrderManager;
-import search.order.gnb.index.IndexBootstrap;
+import search.order.common.index.IndexBootstrap;
 
 import java.util.List;
 
@@ -22,36 +23,28 @@ import java.util.List;
 @Slf4j
 public class AutoOrderController {
 
-    private final GnbOrderManager gnbOrderManager;
+
+    private final CommonOrderManager commonOrderManager;
     private final IndexBootstrap indexBootstrap;
-
-    @PostMapping("/order/products")
-    public ResponseEntity<Boolean> orderGnbProduct(@RequestBody AutoOrderRequestDto autoOrderRequestDto) {
-
-        if (!gnbOrderManager.validateProduct(autoOrderRequestDto)) {
-
-            return ResponseEntity.ok(false);
-        }
-        gnbOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
-        gnbOrderManager.orderProduct(autoOrderRequestDto);
-        return ResponseEntity.ok(true);
-    }
 
     @PostMapping("/order/products/bulk")
     public ResponseEntity<Boolean> orderGnbProduct(@RequestBody List<AutoOrderRequestDto> autoOrderRequestDtoList) {
 
         for (AutoOrderRequestDto autoOrderRequestDto : autoOrderRequestDtoList) {
-            Long validProductId = gnbOrderManager.findTokenAllMatched(autoOrderRequestDto.getSku());
+            Long validProductId = commonOrderManager.findTokenAllMatched(autoOrderRequestDto.getSku());
             if (validProductId == -1L) {
                 log.info("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
                 continue;
             }
             autoOrderRequestDto.setProductId(validProductId);
-            if (!gnbOrderManager.validateProduct(autoOrderRequestDto)) {
+            if (!commonOrderManager.validateProduct(autoOrderRequestDto)) {
                 continue;
             }
-            gnbOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
-            gnbOrderManager.orderProduct(autoOrderRequestDto);
+            commonOrderManager.setValidSizesAndOrderNum(autoOrderRequestDto);
+            // Boutique 맞춰서 OrderManager 가져와서 처리
+
+//            commonOrderManager.getOrderManager
+//            gnbOrderManager.orderProduct(autoOrderRequestDto);
         }
         return ResponseEntity.ok(true);
     }
@@ -64,13 +57,13 @@ public class AutoOrderController {
      */
     @GetMapping("/order/products/sku")
     public ResponseEntity<Long> getValidProductId(@RequestParam String sku) {
-        Long validProductId = gnbOrderManager.findTokenAllMatched(sku);
+        Long validProductId = commonOrderManager.findTokenAllMatched(sku);
 
         return ResponseEntity.ok(validProductId);
     }
 
     @GetMapping("/order/trie/sync")
-    public ResponseEntity<Boolean> syncDbTrie(){
+    public ResponseEntity<Boolean> syncDbTrie() {
         indexBootstrap.init();
         return ResponseEntity.ok(true);
     }

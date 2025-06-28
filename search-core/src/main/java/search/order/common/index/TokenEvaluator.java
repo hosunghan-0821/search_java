@@ -1,4 +1,4 @@
-package search.order.gnb.index;
+package search.order.common.index;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package search.order.gnb.dto;
+package search.order.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

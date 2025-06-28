@@ -1,4 +1,4 @@
-package search.order.gnb.index;
+package search.order.common.index;
 
 import java.util.Set;
 
