@@ -1,6 +1,7 @@
 package search.order.gnb;
 
 import module.database.repository.ProductRepository;
+import org.openqa.selenium.NotFoundException;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,8 @@ import java.util.regex.Pattern;
 public class GnbOrderService {
 
     private final ProductRepository productRepository;
+
+    private final GnbRetryLogicService gnbRetryLogicService;
 
     @Value("${gebenegozi.user.id}")
     private String userId;
@@ -171,6 +174,18 @@ public class GnbOrderService {
         BufferedLog.info("GNB STEP3 상품 쇼핑카트내 주문 시작 START sku: {}", autoOrderRequestDto.getSku());
         driver.get("http://93.46.41.5:1995/cart");
 
+        // 지금 들어온 주문 정보가 아니면 휴지통 누르기
+        try {
+            List<String> unOrderCartingProduct = findUnOrderCartingProduct(driver, wait, autoOrderRequestDto);
+            if (!unOrderCartingProduct.isEmpty()) {
+                gnbRetryLogicService.deleteUnOrderCartingProduct(driver, wait, autoOrderRequestDto, unOrderCartingProduct);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            BufferedLog.error("UnCarting 정보 삭제 실패 ");
+        }
+
+
         String pattern = "\\S";
         Pattern p = Pattern.compile(pattern);
         wait.until(ExpectedConditions.textMatches(By.xpath("//div[@class='row title font-italic text-capitalize']//div[@class='col-5']"), p));
@@ -217,6 +232,8 @@ public class GnbOrderService {
 
         // 최종 확인 시정에 설정.
         boolean isDev = env.acceptsProfiles(Profiles.of("dev"));
+
+
         if (!isDev) {
             WebElement confirmButton = driver.findElement(By.id("confirm-order"));
             confirmButton.click();
@@ -236,6 +253,30 @@ public class GnbOrderService {
         return new OrderResultDto(true, orderInfo);
 
     }
+
+    private List<String> findUnOrderCartingProduct(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) throws InterruptedException {
+
+        String pattern = "\\S";
+        Pattern p = Pattern.compile(pattern);
+        wait.until(ExpectedConditions.textMatches(By.xpath("//div[@class='row title font-italic text-capitalize']//div[@class='col-5']"), p));
+        List<WebElement> elements = driver.findElements(By.xpath("//div[@class='shopping-cart mb-3']"));
+        List<String> unCartingProductSku = new ArrayList<>();
+        for (WebElement productElement : elements) {
+
+            //상품정보
+            WebElement infoElement = productElement.findElement(By.xpath(".//div[@class='row title font-italic text-capitalize']"));
+            List<WebElement> dataList = infoElement.findElements(By.xpath(".//div[@class='col-5']"));
+            String sku = dataList.get(1).getText();
+
+            if (!autoOrderRequestDto.getSku().equals(sku)) {
+                BufferedLog.error("내가 선택한 상품아닌 다른 상품이 Cart에 존재함. SKU: {}", sku);
+                unCartingProductSku.add(sku);
+            }
+        }
+
+        return unCartingProductSku;
+    }
+
 
     private void validateLogin(ChromeDriver driver, WebDriverWait wait, AutoOrderRequestDto autoOrderRequestDto) {
 

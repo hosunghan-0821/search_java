@@ -69,7 +69,7 @@ public class SeleniumDriverPool implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.initBrandSeleniumDriver(Boutique.GNB.getName(), 0);
-        this.initBrandSeleniumDriver(Boutique.JULIAN.getName(), 1);
+        this.initBrandSeleniumDriver(Boutique.GNB.getName(), 2);
+        this.initBrandSeleniumDriver(Boutique.JULIAN.getName(), 2);
     }
 }

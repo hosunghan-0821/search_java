@@ -53,15 +53,18 @@ public class GnbOrderManager implements OrderManager {
             // 공통 메소드로 추출된 Discord 알림
             notificationService.sendAutoOrderNotification("상품 주문 시작", autoOrderRequestDto, "", Color.GRAY, "LOG");
 
-            gnbOrderService.step1(driver, wait, autoOrderRequestDto);
-            gnbOrderService.step2(driver, wait, autoOrderRequestDto);
 
             try {
                 boolean acquired = finalOrderStepLock.tryLock(3, TimeUnit.MINUTES);
                 if (acquired) {
+                    //TODO 전부 직렬처리..
+                    gnbOrderService.step1(driver, wait, autoOrderRequestDto);
+                    gnbOrderService.step2(driver, wait, autoOrderRequestDto);
                     orderResultDto = gnbOrderService.step3(driver, wait, autoOrderRequestDto);
                 } else {
                     log.error("락 획득하지 못해서, 최종 주문 실패 SKU: {}, PRODUCT LINK: {}", autoOrderRequestDto.getSku(), autoOrderRequestDto.getProductLink());
+                    notificationService.sendAutoOrderNotification("상품 주문 실패", autoOrderRequestDto, "LOCK 획득실패", Color.RED, "FAIL", autoOrderRequestDto.getSku());
+                    return;
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
