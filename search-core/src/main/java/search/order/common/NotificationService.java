@@ -58,6 +58,15 @@ public class NotificationService {
     }
 
     private String makeDiscordSendMessage(AutoOrderRequestDto autoOrderRequestDto, String headerMessage, String errorMessage) {
-        return String.format("%s%n" + "sku                : %s%n" + "오류 메시지        : %s", headerMessage, autoOrderRequestDto.getSku(), errorMessage);
+        return String.format(
+                "%s%n" +
+                        "sku                : %s%n" +
+                        "오류 메시지        : %s%n" +
+                        "boutique           : %s",
+                headerMessage,
+                autoOrderRequestDto.getSku(),
+                errorMessage,
+                autoOrderRequestDto.getBoutique()
+        );
     }
 }

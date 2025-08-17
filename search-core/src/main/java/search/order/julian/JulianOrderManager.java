@@ -1,5 +1,6 @@
 package search.order.julian;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import module.database.dto.Boutique;
@@ -22,9 +23,15 @@ import search.pool.SeleniumDriverPool;
 import search.util.SeleniumUtil;
 
 import java.awt.*;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -37,7 +44,8 @@ public class JulianOrderManager implements OrderManager {
     private final TokenEvaluator tokenEvaluator;
     private final NotificationService notificationService;
     private final ReentrantLock finalOrderStepLock = new ReentrantLock(true);
-
+    @Getter
+    private final Map<String, ZonedDateTime> lastOrderedAt = new ConcurrentHashMap<>();
 
     @Async
     @Buffered
@@ -51,6 +59,20 @@ public class JulianOrderManager implements OrderManager {
             ChromeDriver driver = chromeDriverTool.getChromeDriver();
             WebDriverWait wait = chromeDriverTool.getWebDriverWait();
 
+            // 페이지 버그
+            // 1시간 내 주문했던적이 있는 상품인지. validate
+            {
+                // 체크
+                ZonedDateTime oneHourAgo = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1);
+                String sku = autoOrderRequestDto.getSku();
+
+                ZonedDateTime last = lastOrderedAt.get(sku);
+                if (last != null && last.isAfter(oneHourAgo)) {
+                    log.info("[Julian]: already ordered within 1 hour. sku: {}", sku);
+                    return;
+                }
+            }
+
 
             // 공통 메소드로 추출된 Discord 알림
             notificationService.sendAutoOrderNotification("상품 주문 시작", autoOrderRequestDto, "", Color.GRAY, "LOG");
@@ -59,6 +81,8 @@ public class JulianOrderManager implements OrderManager {
             julianOrderService.step2(driver, wait, autoOrderRequestDto);
             orderResultDto = julianOrderService.step3(driver, wait, autoOrderRequestDto);
             julianOrderService.step4(driver, wait, autoOrderRequestDto);
+            //정상주문 됬따는 이야기.
+            lastOrderedAt.put(autoOrderRequestDto.getSku(), ZonedDateTime.now(ZoneId.of("Asia/Seoul")));
 
         } catch (Exception e) {
             log.error("상품 주문 실패 : " + autoOrderRequestDto.toString() + " ERROR msg : " + e.getMessage());

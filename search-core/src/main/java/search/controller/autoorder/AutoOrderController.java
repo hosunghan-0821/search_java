@@ -51,6 +51,7 @@ public class AutoOrderController {
             // Boutique 맞춰서 OrderManager 가져와서 처리
             OrderManager autoOrderManagerOrNull = commonOrderManager.getAutoOrderManagerOrNull(autoOrderRequestDto.getBoutique());
             if (autoOrderManagerOrNull != null) {
+
                 autoOrderManagerOrNull.orderProduct(autoOrderRequestDto);
             } else {
                 log.error("CANNOT FIND AUTO ORDER MANAGER :{}", autoOrderRequestDto.getBoutique());
