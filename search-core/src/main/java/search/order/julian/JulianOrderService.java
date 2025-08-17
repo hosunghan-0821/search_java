@@ -11,6 +11,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -235,7 +236,14 @@ public class JulianOrderService {
         }
 
         WebElement finalConfirmCheckBox = driver.findElement(By.id("confirm_order"));
-        System.out.println(finalConfirmCheckBox);
+        boolean isDev = env.acceptsProfiles(Profiles.of("dev"));
+        //개발계에서는 클릭하면 안됨
+        if (!isDev) {
+            finalConfirmCheckBox.click();
+        } else {
+            System.out.println(finalConfirmCheckBox);
+        }
+
 
         BufferedLog.info("JULIAN STEP4 상품 마지막 컨펌 페이지 완료");
     }

@@ -36,7 +36,7 @@ public class AutoOrderController {
         for (AutoOrderRequestDto autoOrderRequestDto : autoOrderRequestDtoList) {
             Long validProductId = commonOrderManager.findTokenAllMatched(autoOrderRequestDto.getSku());
             if (validProductId == -1L) {
-                log.info("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
+                //log.info("품번에 해당하는 토큰집합이 없습니다. SKU: {}", autoOrderRequestDto.getSku());
                 continue;
             }
             autoOrderRequestDto.setProductId(validProductId);
@@ -51,7 +51,6 @@ public class AutoOrderController {
             // Boutique 맞춰서 OrderManager 가져와서 처리
             OrderManager autoOrderManagerOrNull = commonOrderManager.getAutoOrderManagerOrNull(autoOrderRequestDto.getBoutique());
             if (autoOrderManagerOrNull != null) {
-
                 autoOrderManagerOrNull.orderProduct(autoOrderRequestDto);
             } else {
                 log.error("CANNOT FIND AUTO ORDER MANAGER :{}", autoOrderRequestDto.getBoutique());

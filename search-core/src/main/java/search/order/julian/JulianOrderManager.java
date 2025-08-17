@@ -81,7 +81,7 @@ public class JulianOrderManager implements OrderManager {
             julianOrderService.step2(driver, wait, autoOrderRequestDto);
             orderResultDto = julianOrderService.step3(driver, wait, autoOrderRequestDto);
             julianOrderService.step4(driver, wait, autoOrderRequestDto);
-            //정상주문 됬따는 이야기.
+            //정상주문 됬을 때, 관리하도록 변경
             lastOrderedAt.put(autoOrderRequestDto.getSku(), ZonedDateTime.now(ZoneId.of("Asia/Seoul")));
 
         } catch (Exception e) {
