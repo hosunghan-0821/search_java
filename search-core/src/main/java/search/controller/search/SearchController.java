@@ -30,11 +30,11 @@ public class SearchController {
         log.info(searchRequestDto.getMonitoringSite());
         List<SearchProduct> searchProductList = searchRequestDto.getData();
 
-        kreamSearchCore.searchProductOrNull(searchProductList, searchRequestDto.getMonitoringSite());
+        //일단 보류
+        //kreamSearchCore.searchProductOrNull(searchProductList, searchRequestDto.getMonitoringSite());
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 
 
 }

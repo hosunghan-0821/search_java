@@ -58,7 +58,7 @@ public class CommonOrderManager {
         if (autoOrderProduct.isPresent()) {
             Product product = autoOrderProduct.get();
             if (!autoOrderRequestDto.getBoutique().equals(product.getBoutique())) {
-                log.info("[Auto Order] - BOUTIQUE 값이 상이합니다 BOUTIQUE:{} SKU: {}", product.getBoutique(), autoOrderRequestDto.getSku());
+                //log.info("[Auto Order] - BOUTIQUE 값이 상이합니다 BOUTIQUE:{} SKU: {}", product.getBoutique(), autoOrderRequestDto.getSku());
                 return false;
             }
 

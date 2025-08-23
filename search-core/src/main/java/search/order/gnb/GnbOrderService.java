@@ -95,6 +95,9 @@ public class GnbOrderService {
 
             // 원하는 값들 찾으면
             if (autoOrderRequestDto.getSku().equals(sku)) {
+                log.info("GNB STEP2 상품 찾음, Size 찾으러 이동 {}", autoOrderRequestDto.getSku());
+                BufferedLog.info("GNB STEP2 상품 찾음, Size 찾으러 이동 {}", autoOrderRequestDto.getSku());
+
                 Map<String, Long> orderSizeMap = new HashMap<>();
 
                 try {
@@ -158,10 +161,28 @@ public class GnbOrderService {
                 }
                 BufferedLog.info("GNB STEP2 상품 검색 쇼핑카트 등록 FINISH");
                 return;
+            } else {
+                log.info("GNB STEP2 페이지 내 데이터 순회 하면서 상품 검색 현재 검색 SKU : {}  주문 SKU : {}", sku, autoOrderRequestDto.getSku());
             }
         }
         log.error("GNB STEP2 상품 존재하지 않음  sku : {}", autoOrderRequestDto.getSku());
-        BufferedLog.error("GNB STEP2 상품 존재하지 않음");
+        BufferedLog.error("GNB STEP2 상품 존재하지 않음 - 새로고침 진행 START");
+        //새로고침 추가
+        {
+            validateLogin(driver, wait, autoOrderRequestDto);
+
+            if (driver.getCurrentUrl().equals(autoOrderRequestDto.getProductLink())) {
+                driver.navigate().refresh();
+            }
+
+            driver.get(autoOrderRequestDto.getProductLink());
+
+            driver.findElements(By.xpath("//div[@class='shopping-cart mb-3']"));
+            String pattern = "\\S";
+            Pattern p = Pattern.compile(pattern);
+            wait.until(ExpectedConditions.textMatches(By.xpath("//div[@class='row title font-italic text-capitalize artPrezzi']//div[@class='col-5']"), p));
+        }
+        BufferedLog.error("GNB STEP2 상품 존재하지 않음 - 새로고침 진행 END");
         throw new ProductSearchFailException("GNB STEP2 상품 존재하지 않음");
     }
 
